@@ -16,7 +16,7 @@ from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
-from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
+ 
 
 # Configuration
 DBT_PROJECT_DIR = "/usr/app/dbt"
@@ -121,26 +121,7 @@ end_success = EmptyOperator(
     dag=dag,
 )
 
-# Failure Notification Task
-def send_failure_notification(context):
-    """Send notification on task failure."""
-    task_instance = context['task_instance']
-    dag_id = context['dag'].dag_id
-    task_id = task_instance.task_id
-    execution_date = context['execution_date']
-    log_url = task_instance.log_url
-    
-    message = f"""
-    :red_circle: *DBT Pipeline Failure*
-    
-    *DAG:* {dag_id}
-    *Task:* {task_id}
-    *Execution Date:* {execution_date}
-    *Log URL:* {log_url}
-    
-    Please investigate immediately.
-    """
-    return message
+ 
 
 # Failure Notification with detailed context
 def build_failure_message(context):
@@ -224,6 +205,7 @@ def build_failure_message(context):
     """
     return message
 
+ 
 def send_failure_notification(**context):
     """Send detailed failure notification to Slack."""
     import os
@@ -256,6 +238,7 @@ notify_failure = PythonOperator(
     dag=dag,
 )
 
+ 
 # Success Notification with detailed summary
 def build_success_message(context):
     """Build detailed success notification message with pipeline metrics."""
@@ -283,6 +266,7 @@ def build_success_message(context):
     """
     return message
 
+ 
 def send_success_notification(**context):
     """Send detailed success notification to Slack."""
     import os
