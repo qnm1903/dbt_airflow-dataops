@@ -40,66 +40,66 @@ product_sales_metrics as (
         -- Sales volume metrics
         count(distinct s.sales_order_id) as total_orders,
         count(distinct s.customer_id) as unique_customers,
-        count(*) as total_line_items,
-        sum(s.order_quantity) as total_quantity_sold,
+        sum(case when s.sales_order_id is not null then 1 else 0 end) as total_line_items,
+        coalesce(sum(s.order_quantity), 0) as total_quantity_sold,
         avg(s.order_quantity) as avg_quantity_per_order,
         min(s.order_quantity) as min_quantity_per_order,
         max(s.order_quantity) as max_quantity_per_order,
         
         -- Revenue and profitability
-        sum(s.line_total) as total_revenue,
+        coalesce(sum(s.line_total), 0) as total_revenue,
         avg(s.line_total) as avg_revenue_per_line,
-        sum(s.gross_amount) as total_gross_revenue,
-        sum(s.discount_amount) as total_discounts_given,
+        coalesce(sum(s.gross_amount), 0) as total_gross_revenue,
+        coalesce(sum(s.discount_amount), 0) as total_discounts_given,
         avg(s.unit_price) as avg_selling_price,
         min(s.unit_price) as min_selling_price,
         max(s.unit_price) as max_selling_price,
         
         -- Actual profitability calculations
-        sum(s.line_total) - (sum(s.order_quantity) * p.standard_cost) as total_actual_profit,
+        coalesce(sum(s.line_total), 0) - (coalesce(sum(s.order_quantity), 0) * p.standard_cost) as total_actual_profit,
         case 
-            when sum(s.line_total) > 0 
-            then ((sum(s.line_total) - (sum(s.order_quantity) * p.standard_cost)) / sum(s.line_total)) * 100
+            when coalesce(sum(s.line_total), 0) > 0 
+            then ((coalesce(sum(s.line_total), 0) - (coalesce(sum(s.order_quantity), 0) * p.standard_cost)) / coalesce(sum(s.line_total), 0)) * 100
             else 0
         end as actual_profit_margin_percentage,
         
         case 
-            when sum(s.order_quantity) > 0 
-            then (sum(s.line_total) - (sum(s.order_quantity) * p.standard_cost)) / sum(s.order_quantity)
+            when coalesce(sum(s.order_quantity), 0) > 0 
+            then (coalesce(sum(s.line_total), 0) - (coalesce(sum(s.order_quantity), 0) * p.standard_cost)) / coalesce(sum(s.order_quantity), 0)
             else 0
         end as actual_profit_per_unit,
         
         -- Discount analysis
-        sum(case when s.has_discount = 1 then 1 else 0 end) as discounted_sales,
+        coalesce(sum(case when s.has_discount = 1 then 1 else 0 end), 0) as discounted_sales,
         case 
-            when count(*) > 0 
-            then (sum(case when s.has_discount = 1 then 1 else 0 end) * 100.0 / count(*))
+            when sum(case when s.sales_order_id is not null then 1 else 0 end) > 0 
+            then (coalesce(sum(case when s.has_discount = 1 then 1 else 0 end), 0) * 100.0 / sum(case when s.sales_order_id is not null then 1 else 0 end))
             else 0
         end as discount_penetration_rate,
         
-        avg(case when s.has_discount = 1 then s.unit_price_discount else 0 end) as avg_discount_rate,
+        avg(case when s.has_discount = 1 then s.unit_price_discount else null end) as avg_discount_rate,
         
         -- Temporal analysis
         min(s.order_date) as first_sale_date,
         max(s.order_date) as last_sale_date,
-        datediff(day, min(s.order_date), max(s.order_date)) as days_in_sales,
-        datediff(day, max(s.order_date), CAST(GETDATE() AS DATE)) as days_since_last_sale,
+        case when min(s.order_date) is not null then datediff(day, min(s.order_date), max(s.order_date)) else null end as days_in_sales,
+        case when max(s.order_date) is not null then datediff(day, max(s.order_date), CAST(GETDATE() AS DATE)) else null end as days_since_last_sale,
         
         -- Order value analysis
-        sum(case when s.revenue_category = 'LOW_VALUE' then 1 else 0 end) as low_value_sales,
-        sum(case when s.revenue_category = 'MEDIUM_VALUE' then 1 else 0 end) as medium_value_sales,
-        sum(case when s.revenue_category = 'HIGH_VALUE' then 1 else 0 end) as high_value_sales,
-        sum(case when s.revenue_category = 'PREMIUM_VALUE' then 1 else 0 end) as premium_value_sales,
+        coalesce(sum(case when s.revenue_category = 'LOW_VALUE' then 1 else 0 end), 0) as low_value_sales,
+        coalesce(sum(case when s.revenue_category = 'MEDIUM_VALUE' then 1 else 0 end), 0) as medium_value_sales,
+        coalesce(sum(case when s.revenue_category = 'HIGH_VALUE' then 1 else 0 end), 0) as high_value_sales,
+        coalesce(sum(case when s.revenue_category = 'PREMIUM_VALUE' then 1 else 0 end), 0) as premium_value_sales,
         
         -- Channel analysis
-        sum(case when s.order_channel = 'ONLINE' then s.line_total else 0 end) as online_revenue,
-        sum(case when s.order_channel = 'OFFLINE' then s.line_total else 0 end) as offline_revenue,
+        coalesce(sum(case when s.order_channel = 'ONLINE' then s.line_total else 0 end), 0) as online_revenue,
+        coalesce(sum(case when s.order_channel = 'OFFLINE' then s.line_total else 0 end), 0) as offline_revenue,
         
         -- Seasonal performance
-        sum(case when s.order_season = 'WINTER' then s.line_total else 0 end) as winter_revenue,
-        sum(case when s.order_season = 'SPRING' then s.line_total else 0 end) as spring_revenue,
-        sum(case when s.order_season = 'SUMMER' then s.line_total else 0 end) as summer_revenue,
-        sum(case when s.order_season = 'FALL' then s.line_total else 0 end) as fall_revenue
+        coalesce(sum(case when s.order_season = 'WINTER' then s.line_total else 0 end), 0) as winter_revenue,
+        coalesce(sum(case when s.order_season = 'SPRING' then s.line_total else 0 end), 0) as spring_revenue,
+        coalesce(sum(case when s.order_season = 'SUMMER' then s.line_total else 0 end), 0) as summer_revenue,
+        coalesce(sum(case when s.order_season = 'FALL' then s.line_total else 0 end), 0) as fall_revenue
         
     from products p
     left join sales_details s
