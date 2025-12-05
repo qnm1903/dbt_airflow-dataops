@@ -2,50 +2,137 @@ version: 2
 
 models:
   - name: slvr_customers
-    description: Cleaned and standardized customer data
+    description: "Silver layer enhanced customer data with business logic, enrichment, and customer segmentation"
     columns:
       - name: customer_id
-        description: Unique customer identifier
+        description: "Primary key for Customer records"
         tests:
-          - unique
           - not_null
+          - unique
       - name: full_name
-        description: Customer full name
-      - name: email_promotion
-        description: Email promotion preference
+        description: "Customer full name or BUSINESS_CUSTOMER for business accounts"
+        tests:
+          - not_null
+      - name: customer_type
+        description: "Customer classification: BUSINESS or INDIVIDUAL"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['BUSINESS', 'INDIVIDUAL']
+      - name: email_preference_category
+        description: "Email marketing preference category"
+        tests:
+          - accepted_values:
+              values: ['NO_EMAIL', 'ADVENTURE_WORKS_ONLY', 'PARTNER_EMAIL', 'UNKNOWN']
+      - name: is_store_customer
+        description: "Flag indicating if customer has store association"
+        tests:
+          - accepted_values:
+              values: [0, 1]
+      - name: silver_created_at
+        description: "Timestamp when record was created in silver layer"
+        tests:
+          - not_null
 
   - name: slvr_products
-    description: Cleaned and standardized product data
+    description: "Silver layer enhanced product data with business logic, categorization, and performance metrics"
     columns:
       - name: product_id
-        description: Unique product identifier
+        description: "Primary key for Product records"
         tests:
-          - unique
           - not_null
+          - unique
       - name: product_name
-        description: Product name
-      - name: list_price
-        description: Product list price
+        description: "Product name, cleaned and validated"
+        tests:
+          - not_null
+      - name: sourcing_type
+        description: "Manufacturing vs purchased classification"
+        tests:
+          - accepted_values:
+              values: ['MANUFACTURED', 'PURCHASED']
+      - name: profit_margin_percentage
+        description: "Calculated profit margin percentage based on list price and standard cost"
+        tests:
+          - not_null
+      - name: price_category
+        description: "Price tier categorization for business analysis"
+        tests:
+          - accepted_values:
+              values: ['NO_PRICE', 'LOW_PRICE', 'MEDIUM_PRICE', 'HIGH_PRICE', 'PREMIUM_PRICE']
+      - name: product_status
+        description: "Product lifecycle status based on sell dates"
+        tests:
+          - accepted_values:
+              values: ['ACTIVE', 'DISCONTINUED']
+      - name: silver_created_at
+        description: "Timestamp when record was created in silver layer"
         tests:
           - not_null
 
   - name: slvr_sales_orders
-    description: Cleaned sales order data with calculated fields
+    description: "Silver layer enhanced sales order data with business logic, enriched metrics, and performance calculations"
     columns:
       - name: sales_order_id
-        description: Sales order identifier
+        description: "Sales order identifier"
         tests:
           - not_null
-      - name: order_detail_id
-        description: Order detail identifier
+      - name: sales_order_detail_id
+        description: "Unique sales order detail identifier"
         tests:
           - not_null
-      - name: line_total
-        description: Total amount for line item
+          - unique
+      - name: order_channel
+        description: "Order channel classification"
+        tests:
+          - accepted_values:
+              values: ['ONLINE', 'OFFLINE']
+      - name: customer_type
+        description: "Customer type from customer dimension"
+      - name: order_quantity
+        description: "Validated order quantity"
         tests:
           - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+      - name: revenue_category
+        description: "Revenue tier classification"
+        tests:
+          - accepted_values:
+              values: ['LOW_VALUE', 'MEDIUM_VALUE', 'HIGH_VALUE', 'PREMIUM_VALUE']
+      - name: silver_created_at
+        description: "Timestamp when record was created in silver layer"
+        tests:
+          - not_null
+    
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
             - sales_order_id
-            - order_detail_id
+            - sales_order_detail_id
+
+  - name: slvr_order_summary
+    description: "Silver layer order-level summary aggregating multiple line items into order-level business metrics"
+    columns:
+      - name: sales_order_id
+        description: "Primary key for order summary"
+        tests:
+          - not_null
+          - unique
+      - name: total_line_items
+        description: "Number of line items in the order"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+      - name: total_order_value
+        description: "Total monetary value of the order"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: order_complexity
+        description: "Order complexity based on number of line items"
+        tests:
+          - accepted_values:
+              values: ['SINGLE_LINE', 'SIMPLE_ORDER', 'COMPLEX_ORDER', 'VERY_COMPLEX_ORDER']

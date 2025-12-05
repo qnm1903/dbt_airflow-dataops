@@ -1,49 +1,163 @@
 version: 2
 
 models:
-  - name: brnz_sales_orders
-    description: Staging model combining sales order headers and details
+  - name: brnz_customers
+    description: "Bronze layer customer data with basic cleaning and standardization from AdventureWorks Customer and Person tables"
     columns:
-      - name: sales_order_id
-        description: Primary key for sales orders
+      - name: customer_id
+        description: "Primary key for Customer records"
         tests:
           - not_null
-      - name: order_detail_id
-        description: Primary key for sales order details
+          - unique
+      - name: person_id
+        description: "Foreign key to Person.BusinessEntityID, can be null for store customers"
+      - name: first_name
+        description: "Customer first name, standardized to uppercase, defaults to UNKNOWN"
+        tests:
+          - not_null
+      - name: last_name
+        description: "Customer last name, standardized to uppercase, defaults to UNKNOWN"
+        tests:
+          - not_null
+      - name: email_promotion
+        description: "Email promotion preference: 0=No email, 1=From AdventureWorks, 2=From partners"
+        tests:
+          - accepted_values:
+              values: [0, 1, 2]
+      - name: store_id
+        description: "Foreign key to Store table for business customers"
+      - name: territory_id
+        description: "Foreign key to SalesTerritory table"
+      - name: source_modified_date
+        description: "Original modification date from source system"
+        tests:
+          - not_null
+      - name: bronze_created_at
+        description: "Timestamp when record was created in bronze layer"
+        tests:
+          - not_null
+
+  - name: brnz_products
+    description: "Bronze layer product data with cleaning, standardization and category hierarchy from AdventureWorks Production tables"
+    columns:
+      - name: product_id
+        description: "Primary key for Product records"
+        tests:
+          - not_null
+          - unique
+      - name: product_number
+        description: "Unique product identification number"
+        tests:
+          - not_null
+          - unique
+      - name: product_name
+        description: "Product name, cleaned and trimmed"
+        tests:
+          - not_null
+      - name: color
+        description: "Product color, standardized to uppercase, defaults to NOT SPECIFIED"
+      - name: size
+        description: "Product size, standardized to uppercase, defaults to NOT SPECIFIED"
+      - name: make_flag
+        description: "Flag indicating if product is manufactured by AdventureWorks: 0=Purchased, 1=Manufactured"
+        tests:
+          - accepted_values:
+              values: [0, 1]
+      - name: finished_goods_flag
+        description: "Flag indicating if product is sellable: 0=Not sellable, 1=Sellable"
+        tests:
+          - accepted_values:
+              values: [0, 1]
+      - name: standard_cost
+        description: "Standard cost of the product, validated to be non-negative"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: list_price
+        description: "Selling price, validated to be non-negative"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: category_name
+        description: "Product category name, defaults to Uncategorized"
+      - name: subcategory_name
+        description: "Product subcategory name, defaults to Uncategorized"
+      - name: sell_start_date
+        description: "Date product was available for sale"
+        tests:
+          - not_null
+      - name: bronze_created_at
+        description: "Timestamp when record was created in bronze layer"
+        tests:
+          - not_null
+
+  - name: brnz_sales_orders
+    description: "Bronze layer sales order data combining header and detail with data validation and cleaning"
+    columns:
+      - name: sales_order_id
+        description: "Primary key for SalesOrderHeader records"
+        tests:
+          - not_null
+      - name: sales_order_detail_id
+        description: "Primary key for SalesOrderDetail records"
+        tests:
+          - not_null
+          - unique
+      - name: sales_order_number
+        description: "Unique sales order identification number"
         tests:
           - not_null
       - name: order_date
-        description: Date when the order was placed
-      - name: due_date
-        description: Date when the order is due
-      - name: ship_date
-        description: Date when the order was shipped
-      - name: status
-        description: Current status of the order
+        description: "Date the sales order was created"
+        tests:
+          - not_null
+      - name: order_status
+        description: "Order current status: 1=In process, 2=Approved, 3=Backordered, 4=Rejected, 5=Shipped, 6=Cancelled"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4, 5, 6]
       - name: online_order_flag
-        description: Flag indicating if the order was placed online
-      - name: sales_order_number
-        description: Unique sales order number
-      - name: purchase_order_number
-        description: Customer purchase order number
+        description: "Flag indicating if order was placed online: 0=Offline, 1=Online"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1]
       - name: customer_id
-        description: Foreign key reference to customer
-      - name: sales_person_id
-        description: ID of the sales person
-      - name: territory_id
-        description: Sales territory ID
+        description: "Customer identification number"
+        tests:
+          - not_null
       - name: product_id
-        description: Foreign key reference to product
-      - name: order_qty
-        description: Quantity ordered
+        description: "Product identification number"
+        tests:
+          - not_null
+      - name: order_quantity
+        description: "Quantity ordered, validated to be positive"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
       - name: unit_price
-        description: Unit price of the product
-      - name: unit_price_discount
-        description: Discount amount
+        description: "Selling price of a single product, validated to be non-negative"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
       - name: line_total
-        description: Total amount for this line item
+        description: "Per product subtotal, validated to be non-negative"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: bronze_created_at
+        description: "Timestamp when record was created in bronze layer"
+        tests:
+          - not_null
+
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
             - sales_order_id
-            - order_detail_id 
+            - sales_order_detail_id 
