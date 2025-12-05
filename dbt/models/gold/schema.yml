@@ -114,6 +114,7 @@ models:
         tests:
           - unique
           - not_null
+          - date_not_in_future
       - name: total_revenue
         description: "Total revenue for the day"
         tests:

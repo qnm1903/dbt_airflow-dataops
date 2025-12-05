@@ -55,6 +55,9 @@ models:
         description: "Calculated profit margin percentage based on list price and standard cost"
         tests:
           - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
       - name: price_category
         description: "Price tier categorization for business analysis"
         tests:
@@ -82,6 +85,11 @@ models:
         tests:
           - not_null
           - unique
+      - name: order_date
+        description: "Date the sales order was created"
+        tests:
+          - not_null
+          - date_not_in_future
       - name: order_channel
         description: "Order channel classification"
         tests:
@@ -95,6 +103,12 @@ models:
           - not_null
           - dbt_utils.accepted_range:
               min_value: 1
+      - name: line_total
+        description: "Per product subtotal"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
       - name: revenue_category
         description: "Revenue tier classification"
         tests:

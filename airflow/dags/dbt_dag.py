@@ -40,7 +40,7 @@ dag = DAG(
     'dbt_transform_pipeline',
     default_args=default_args,
     description='DBT transformation pipeline with bronze/silver/gold layers',
-    schedule_interval='0 6 * * *',  # Daily at 6 AM UTC -> 
+    schedule_interval='0 6 * * *',  # Daily at 6 AM UTC
     start_date=datetime(2024, 1, 1),
     catchup=False,
     tags=['dbt', 'data-pipeline', 'etl'],
