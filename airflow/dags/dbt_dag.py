@@ -66,7 +66,7 @@ check_source_freshness = BashOperator(
 # DBT Dependencies
 dbt_deps = BashOperator(
     task_id='dbt_deps',
-    bash_command=f'docker exec {DBT_CONTAINER} dbt deps --profiles-dir {DBT_PROFILES_DIR} && exit 1',  # Temporarily fail to test Slack notification
+    bash_command=f'docker exec {DBT_CONTAINER} dbt deps --profiles-dir {DBT_PROFILES_DIR}',
     dag=dag,
 )
 

@@ -14,7 +14,7 @@ env:
 jobs:
   deploy:
     name: Deploy to Development
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # Uses runner on local machine with access to localhost SQL Server
     environment: development
     
     steps:
@@ -41,7 +41,7 @@ jobs:
                 type: sqlserver
                 driver: 'ODBC Driver 17 for SQL Server'
                 server: ${{ secrets.DEV_SQL_SERVER }}
-                port: 1433
+                port: ${{ secrets.DEV_SQL_PORT }}
                 database: AdventureWorks2014
                 schema: dbo
                 user: ${{ secrets.DEV_SQL_USER }}
