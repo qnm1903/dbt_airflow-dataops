@@ -16,7 +16,6 @@ from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
- 
 
 # Configuration
 DBT_PROJECT_DIR = "/usr/app/dbt"
@@ -121,7 +120,7 @@ end_success = EmptyOperator(
     dag=dag,
 )
 
- 
+# Failure Notification with detailed context
 
 # Failure Notification with detailed context
 def build_failure_message(context):
@@ -205,7 +204,6 @@ def build_failure_message(context):
     """
     return message
 
- 
 def send_failure_notification(**context):
     """Send detailed failure notification to Slack."""
     import os
@@ -219,7 +217,7 @@ def send_failure_notification(**context):
         try:
             conn_data = json.loads(webhook_url)
             webhook_url = conn_data.get('password', '')
-        except:
+        except Exception:
             pass
     
     if webhook_url and webhook_url.startswith('http'):
@@ -238,7 +236,6 @@ notify_failure = PythonOperator(
     dag=dag,
 )
 
- 
 # Success Notification with detailed summary
 def build_success_message(context):
     """Build detailed success notification message with pipeline metrics."""
@@ -266,7 +263,6 @@ def build_success_message(context):
     """
     return message
 
- 
 def send_success_notification(**context):
     """Send detailed success notification to Slack."""
     import os
@@ -280,7 +276,7 @@ def send_success_notification(**context):
         try:
             conn_data = json.loads(webhook_url)
             webhook_url = conn_data.get('password', '')
-        except:
+        except Exception:
             pass
     
     if webhook_url and webhook_url.startswith('http'):
