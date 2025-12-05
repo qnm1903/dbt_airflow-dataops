@@ -121,8 +121,6 @@ end_success = EmptyOperator(
 )
 
 # Failure Notification with detailed context
-
-# Failure Notification with detailed context
 def build_failure_message(context):
     """Build detailed failure notification message with debugging context."""
     from datetime import datetime, timezone
