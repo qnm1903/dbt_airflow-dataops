@@ -32,6 +32,7 @@ models:
         description: "Original modification date from source system"
         tests:
           - not_null
+          - date_not_in_future
       - name: bronze_created_at
         description: "Timestamp when record was created in bronze layer"
         tests:
@@ -100,57 +101,77 @@ models:
         description: "Primary key for SalesOrderHeader records"
         tests:
           - not_null
+
       - name: sales_order_detail_id
         description: "Primary key for SalesOrderDetail records"
         tests:
           - not_null
           - unique
+
       - name: sales_order_number
         description: "Unique sales order identification number"
         tests:
           - not_null
+          - unique
+
       - name: order_date
         description: "Date the sales order was created"
         tests:
           - not_null
+          - date_not_in_future
+
       - name: order_status
         description: "Order current status: 1=In process, 2=Approved, 3=Backordered, 4=Rejected, 5=Shipped, 6=Cancelled"
         tests:
           - not_null
           - accepted_values:
               values: [1, 2, 3, 4, 5, 6]
+
       - name: online_order_flag
         description: "Flag indicating if order was placed online: 0=Offline, 1=Online"
         tests:
           - not_null
           - accepted_values:
               values: [0, 1]
+
       - name: customer_id
         description: "Customer identification number"
         tests:
           - not_null
+          - relationships:
+              to: ref('brnz_customers')
+              field: customer_id
+
       - name: product_id
         description: "Product identification number"
         tests:
           - not_null
+          - relationships:
+              to: ref('brnz_products')
+              field: product_id
+
       - name: order_quantity
         description: "Quantity ordered, validated to be positive"
         tests:
           - not_null
+          - positive_value
           - dbt_utils.accepted_range:
               min_value: 1
+
       - name: unit_price
         description: "Selling price of a single product, validated to be non-negative"
         tests:
           - not_null
           - dbt_utils.accepted_range:
               min_value: 0
+
       - name: line_total
         description: "Per product subtotal, validated to be non-negative"
         tests:
           - not_null
           - dbt_utils.accepted_range:
               min_value: 0
+
       - name: bronze_created_at
         description: "Timestamp when record was created in bronze layer"
         tests:
@@ -160,4 +181,4 @@ models:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
             - sales_order_id
-            - sales_order_detail_id 
+            - sales_order_detail_id

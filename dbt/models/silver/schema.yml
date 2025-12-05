@@ -55,6 +55,9 @@ models:
         description: "Calculated profit margin percentage based on list price and standard cost"
         tests:
           - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
       - name: price_category
         description: "Price tier categorization for business analysis"
         tests:
@@ -82,6 +85,11 @@ models:
         tests:
           - not_null
           - unique
+      - name: order_date
+        description: "Date the sales order was created"
+        tests:
+          - not_null
+          - date_not_in_future
       - name: order_channel
         description: "Order channel classification"
         tests:
@@ -93,8 +101,15 @@ models:
         description: "Validated order quantity"
         tests:
           - not_null
+          - positive_value
           - dbt_utils.accepted_range:
               min_value: 1
+      - name: line_total
+        description: "Per product subtotal"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
       - name: revenue_category
         description: "Revenue tier classification"
         tests:
@@ -104,11 +119,37 @@ models:
         description: "Timestamp when record was created in silver layer"
         tests:
           - not_null
-    
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
             - sales_order_id
+            - sales_order_detail_id
+
+  - name: slvr_order_summary
+    description: "Silver layer order-level summary aggregating multiple line items into order-level business metrics"
+    columns:
+      - name: sales_order_id
+        description: "Primary key for order summary"
+        tests:
+          - not_null
+          - unique
+      - name: total_line_items
+        description: "Number of line items in the order"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+      - name: total_order_value
+        description: "Total monetary value of the order"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: order_complexity
+        description: "Order complexity based on number of line items"
+        tests:
+          - accepted_values:
+              values: ['SINGLE_LINE', 'SIMPLE_ORDER', 'COMPLEX_ORDER', 'VERY_COMPLEX_ORDER']
             - sales_order_detail_id
 
   - name: slvr_order_summary
