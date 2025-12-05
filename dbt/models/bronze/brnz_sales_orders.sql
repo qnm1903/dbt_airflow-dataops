@@ -1,49 +1,73 @@
-with sales_order_header as (
-    select
-        SalesOrderID as sales_order_id,
-        OrderDate as order_date,
-        DueDate as due_date,
-        ShipDate as ship_date,
-        Status as status,
-        OnlineOrderFlag as online_order_flag,
-        SalesOrderNumber as sales_order_number,
-        PurchaseOrderNumber as purchase_order_number,
-        CustomerID as customer_id,
-        SalesPersonID as sales_person_id,
-        TerritoryID as territory_id
-    from {{ source('adventureworks', 'SalesOrderHeader') }}
+{{ config(materialized='view') }}
+
+-- Bronze layer: Raw data cleaning and standardization for sales orders
+with header_raw as (
+    select * from {{ source('adventureworks', 'SalesOrderHeader') }}
 ),
 
-sales_order_detail as (
+detail_raw as (
+    select * from {{ source('adventureworks', 'SalesOrderDetail') }}
+),
+
+cleaned as (
     select
-        SalesOrderDetailID as order_detail_id,
-        SalesOrderID as sales_order_id,
-        ProductID as product_id,
-        OrderQty as order_qty,
-        UnitPrice as unit_price,
-        UnitPriceDiscount as unit_price_discount,
-        LineTotal as line_total
-    from {{ source('adventureworks', 'SalesOrderDetail') }}
+        -- Primary identifiers
+        h.SalesOrderID as sales_order_id,
+        d.SalesOrderDetailID as sales_order_detail_id,
+        
+        -- Order information
+        LTRIM(RTRIM(h.SalesOrderNumber)) as sales_order_number,
+        LTRIM(RTRIM(h.PurchaseOrderNumber)) as purchase_order_number,
+        
+        -- Dates with validation
+        h.OrderDate as order_date,
+        h.DueDate as due_date,
+        h.ShipDate as ship_date,
+        
+        -- Status and flags
+        coalesce(h.Status, 0) as order_status,
+        coalesce(h.OnlineOrderFlag, 0) as online_order_flag,
+        
+        -- Customer and territory
+        h.CustomerID as customer_id,
+        h.SalesPersonID as sales_person_id,
+        h.TerritoryID as territory_id,
+        
+        -- Product and quantities
+        d.ProductID as product_id,
+        case 
+            when d.OrderQty <= 0 then null
+            else d.OrderQty
+        end as order_quantity,
+        
+        -- Financial data with validation
+        case 
+            when d.UnitPrice < 0 then 0.0
+            else coalesce(d.UnitPrice, 0.0)
+        end as unit_price,
+        case 
+            when d.UnitPriceDiscount < 0 or d.UnitPriceDiscount > 1 then 0.0
+            else coalesce(d.UnitPriceDiscount, 0.0)
+        end as unit_price_discount,
+        case 
+            when d.LineTotal < 0 then 0.0
+            else coalesce(d.LineTotal, 0.0)
+        end as line_total,
+        
+        -- Metadata
+        h.ModifiedDate as source_modified_date,
+        GETDATE() as bronze_created_at
+        
+    from header_raw h
+    inner join detail_raw d
+        on h.SalesOrderID = d.SalesOrderID
+    
+    -- Data quality filters
+    where h.SalesOrderID is not null
+        and d.SalesOrderDetailID is not null
+        and h.OrderDate is not null
+        and d.OrderQty > 0
+        and d.UnitPrice >= 0
 )
 
-select
-    h.sales_order_id,
-    h.order_date,
-    h.due_date,
-    h.ship_date,
-    h.status,
-    h.online_order_flag,
-    h.sales_order_number,
-    h.purchase_order_number,
-    h.customer_id,
-    h.sales_person_id,
-    h.territory_id,
-    d.order_detail_id,
-    d.product_id,
-    d.order_qty,
-    d.unit_price,
-    d.unit_price_discount,
-    d.line_total
-from sales_order_header h
-left join sales_order_detail d
-    on h.sales_order_id = d.sales_order_id 
+select * from cleaned 

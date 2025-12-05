@@ -1,21 +1,143 @@
 version: 2
 
 sources:
-  - name: raw
+  - name: adventureworks
     database: AdventureWorks2014
-    schema: dbo
+    schema: Sales
+    description: "AdventureWorks Sales schema containing order and customer data"
+    freshness:
+      warn_after: {count: 24, period: hour}
+      error_after: {count: 48, period: hour}
+    loaded_at_field: ModifiedDate
     tables:
       - name: Customer
-        description: "Raw customer data from AdventureWorks"
-      - name: Person
-        description: "Raw person data from AdventureWorks"
+        description: "Raw customer data from AdventureWorks Sales schema"
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 72, period: hour}
+        loaded_at_field: ModifiedDate
+        columns:
+          - name: CustomerID
+            description: "Primary key for Customer records"
+          - name: PersonID
+            description: "Foreign key to Person.BusinessEntityID"
+          - name: StoreID
+            description: "Foreign key to Store.StoreID"
+          - name: TerritoryID
+            description: "Foreign key to SalesTerritory.TerritoryID"
+          - name: ModifiedDate
+            description: "Date and time the record was last updated"
+
       - name: SalesOrderHeader
-        description: "Raw sales order header data from AdventureWorks"
+        description: "General sales order information from AdventureWorks Sales schema"
+        freshness:
+          warn_after: {count: 12, period: hour}
+          error_after: {count: 24, period: hour}
+        loaded_at_field: ModifiedDate
+        columns:
+          - name: SalesOrderID
+            description: "Primary key for SalesOrderHeader records"
+          - name: OrderDate
+            description: "Dates the sales order was created"
+          - name: CustomerID
+            description: "Customer identification number"
+          - name: Status
+            description: "Order current status"
+          - name: ModifiedDate
+            description: "Date and time the record was last updated"
+
       - name: SalesOrderDetail
-        description: "Raw sales order detail data from AdventureWorks"
+        description: "Individual products associated with a specific sales order from AdventureWorks Sales schema"
+        freshness:
+          warn_after: {count: 12, period: hour}
+          error_after: {count: 24, period: hour}
+        loaded_at_field: ModifiedDate
+        columns:
+          - name: SalesOrderDetailID
+            description: "Primary key for SalesOrderDetail records"
+          - name: SalesOrderID
+            description: "Foreign key to SalesOrderHeader.SalesOrderID"
+          - name: ProductID
+            description: "Product sold to customer"
+          - name: OrderQty
+            description: "Quantity ordered"
+          - name: UnitPrice
+            description: "Selling price of a single product"
+          - name: ModifiedDate
+            description: "Date and time the record was last updated"
+
+  - name: person
+    database: AdventureWorks2014
+    schema: Person
+    description: "AdventureWorks Person schema containing individual person data"
+    freshness:
+      warn_after: {count: 48, period: hour}
+      error_after: {count: 96, period: hour}
+    loaded_at_field: ModifiedDate
+    tables:
+      - name: Person
+        description: "Human beings involved with AdventureWorks: employees, vendors, and customers"
+        loaded_at_field: ModifiedDate
+        columns:
+          - name: BusinessEntityID
+            description: "Primary key for Person records"
+          - name: PersonType
+            description: "Primary type of person: SC = Store Contact, IN = Individual (retail) customer"
+          - name: FirstName
+            description: "First name of the person"
+          - name: LastName
+            description: "Last name of the person"
+          - name: EmailPromotion
+            description: "Email promotion preference"
+          - name: ModifiedDate
+            description: "Date and time the record was last updated"
+
+  - name: production
+    database: AdventureWorks2014
+    schema: Production
+    description: "AdventureWorks Production schema containing product information"
+    freshness:
+      warn_after: {count: 48, period: hour}
+      error_after: {count: 96, period: hour}
+    loaded_at_field: ModifiedDate
+    tables:
       - name: Product
-        description: "Raw product data from AdventureWorks"
-      - name: ProductCategory
-        description: "Raw product category data from AdventureWorks"
+        description: "Products sold or used in the manufacturing of sold products"
+        loaded_at_field: ModifiedDate
+        columns:
+          - name: ProductID
+            description: "Primary key for Product records"
+          - name: Name
+            description: "Name of the product"
+          - name: ProductNumber
+            description: "Unique product identification number"
+          - name: ListPrice
+            description: "Selling price"
+          - name: StandardCost
+            description: "Standard cost of the product"
+          - name: ModifiedDate
+            description: "Date and time the record was last updated"
+          
       - name: ProductSubcategory
-        description: "Raw product subcategory data from AdventureWorks" 
+        description: "Product subcategories"
+        loaded_at_field: ModifiedDate
+        columns:
+          - name: ProductSubcategoryID
+            description: "Primary key for ProductSubcategory records"
+          - name: ProductCategoryID
+            description: "Foreign key to ProductCategory.ProductCategoryID"
+          - name: Name
+            description: "Subcategory description"
+          - name: ModifiedDate
+            description: "Date and time the record was last updated"
+            
+      - name: ProductCategory
+        description: "High-level product categorization"
+        loaded_at_field: ModifiedDate
+        columns:
+          - name: ProductCategoryID
+            description: "Primary key for ProductCategory records"
+          - name: Name
+            description: "Category description"
+          - name: ModifiedDate
+            description: "Date and time the record was last updated"
