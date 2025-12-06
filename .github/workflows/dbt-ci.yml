@@ -30,8 +30,7 @@ jobs:
       - name: Lint SQL files
         run: |
           cd dbt
-          sqlfluff lint models/ --dialect tsql || true
-        continue-on-error: true
+          sqlfluff lint models/ --dialect tsql
 
   lint-python:
     name: Lint Python Files
@@ -51,8 +50,7 @@ jobs:
 
       - name: Lint Python files
         run: |
-          flake8 airflow/dags/ --max-line-length=120 --count --statistics || true
-        continue-on-error: true
+          flake8 airflow/dags/ --max-line-length=120 --count --statistics
 
   dbt-compile:
     name: Compile DBT Models
@@ -80,8 +78,7 @@ jobs:
       - name: Compile DBT models
         run: |
           cd dbt
-          dbt compile --profiles-dir . || true
-        continue-on-error: true
+          dbt compile --profiles-dir .
 
       - name: Upload compiled artifacts
         uses: actions/upload-artifact@v4
