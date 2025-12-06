@@ -27,7 +27,8 @@ dag = DAG(
     tags=["dbt", "silver"],
 )
 
-# Only silver layer. If upstream bronze not present, this may fail; alternatively use +path:models/silver to include parents.
+# Only silver layer. If upstream bronze not present, this may fail;
+# alternatively use +path:models/silver to include parents.
 dbt_run_silver = BashOperator(
     task_id="dbt_run_silver",
     bash_command="docker exec dbt_airflow_project-dbt-1 dbt run --select path:models/silver",

@@ -23,33 +23,33 @@ DBT_PROFILES_DIR = "/usr/app/dbt"
 DBT_CONTAINER = "dbt-airflow-dataops-dbt-1"
 
 default_args = {
-    'owner': 'data_engineering',
-    'depends_on_past': False,
-    'email': ['ngocle266tqt@gmail.com'],
-    'email_on_failure': True,
-    'email_on_retry': False,
-    'retries': 1,
-    'retry_delay': timedelta(minutes=1),
-    'retry_exponential_backoff': True,
-    'max_retry_delay': timedelta(minutes=30),
-    'execution_timeout': timedelta(hours=2),
+    "owner": "data_engineering",
+    "depends_on_past": False,
+    "email": ["ngocle266tqt@gmail.com"],
+    "email_on_failure": True,
+    "email_on_retry": False,
+    "retries": 1,
+    "retry_delay": timedelta(minutes=1),
+    "retry_exponential_backoff": True,
+    "max_retry_delay": timedelta(minutes=30),
+    "execution_timeout": timedelta(hours=2),
 }
 
 dag = DAG(
-    'dbt_transform_pipeline',
+    "dbt_transform_pipeline",
     default_args=default_args,
-    description='DBT transformation pipeline with bronze/silver/gold layers',
-    schedule_interval='0 6 * * *',  # Daily at 6 AM UTC
+    description="DBT transformation pipeline with bronze/silver/gold layers",
+    schedule_interval="0 6 * * *",  # Daily at 6 AM UTC
     start_date=datetime(2024, 1, 1),
     catchup=False,
-    tags=['dbt', 'data-pipeline', 'etl'],
+    tags=["dbt", "data-pipeline", "etl"],
     doc_md=__doc__,
     max_active_runs=1,
 )
 
 # Task Definitions
 start = EmptyOperator(
-    task_id='start',
+    task_id="start",
     dag=dag,
 )
 
@@ -57,93 +57,98 @@ start = EmptyOperator(
 # Note: Using || true to prevent pipeline failure on stale data
 # The freshness check will still log warnings/errors but won't block the DAG
 check_source_freshness = BashOperator(
-    task_id='check_source_freshness',
-    bash_command=f'docker exec {DBT_CONTAINER} dbt source freshness --profiles-dir {DBT_PROFILES_DIR} || true',
+    task_id="check_source_freshness",
+    bash_command=f"docker exec {DBT_CONTAINER} dbt source freshness --profiles-dir {DBT_PROFILES_DIR} || true",
     dag=dag,
 )
 
 # DBT Dependencies
 dbt_deps = BashOperator(
-    task_id='dbt_deps',
-    bash_command=f'docker exec {DBT_CONTAINER} dbt deps --profiles-dir {DBT_PROFILES_DIR}',
+    task_id="dbt_deps",
+    bash_command=f"docker exec {DBT_CONTAINER} dbt deps --profiles-dir {DBT_PROFILES_DIR}",
     dag=dag,
 )
 
 # Bronze Layer
 run_bronze = BashOperator(
-    task_id='run_bronze_models',
-    bash_command=f'docker exec {DBT_CONTAINER} dbt run --select bronze --profiles-dir {DBT_PROFILES_DIR}',
+    task_id="run_bronze_models",
+    bash_command=f"docker exec {DBT_CONTAINER} dbt run --select bronze --profiles-dir {DBT_PROFILES_DIR}",
     dag=dag,
 )
 
 test_bronze = BashOperator(
-    task_id='test_bronze_models',
-    bash_command=f'docker exec {DBT_CONTAINER} dbt test --select bronze --profiles-dir {DBT_PROFILES_DIR}',
+    task_id="test_bronze_models",
+    bash_command=f"docker exec {DBT_CONTAINER} dbt test --select bronze --profiles-dir {DBT_PROFILES_DIR}",
     dag=dag,
 )
 
 # Silver Layer
 run_silver = BashOperator(
-    task_id='run_silver_models',
-    bash_command=f'docker exec {DBT_CONTAINER} dbt run --select silver --profiles-dir {DBT_PROFILES_DIR}',
+    task_id="run_silver_models",
+    bash_command=f"docker exec {DBT_CONTAINER} dbt run --select silver --profiles-dir {DBT_PROFILES_DIR}",
     dag=dag,
 )
 
 test_silver = BashOperator(
-    task_id='test_silver_models',
-    bash_command=f'docker exec {DBT_CONTAINER} dbt test --select silver --profiles-dir {DBT_PROFILES_DIR}',
+    task_id="test_silver_models",
+    bash_command=f"docker exec {DBT_CONTAINER} dbt test --select silver --profiles-dir {DBT_PROFILES_DIR}",
     dag=dag,
 )
 
 # Gold Layer
 run_gold = BashOperator(
-    task_id='run_gold_models',
-    bash_command=f'docker exec {DBT_CONTAINER} dbt run --select gold --profiles-dir {DBT_PROFILES_DIR}',
+    task_id="run_gold_models",
+    bash_command=f"docker exec {DBT_CONTAINER} dbt run --select gold --profiles-dir {DBT_PROFILES_DIR}",
     dag=dag,
 )
 
 test_gold = BashOperator(
-    task_id='test_gold_models',
-    bash_command=f'docker exec {DBT_CONTAINER} dbt test --select gold --profiles-dir {DBT_PROFILES_DIR}',
+    task_id="test_gold_models",
+    bash_command=f"docker exec {DBT_CONTAINER} dbt test --select gold --profiles-dir {DBT_PROFILES_DIR}",
     dag=dag,
 )
 
 # Generate Documentation
 generate_docs = BashOperator(
-    task_id='generate_dbt_docs',
-    bash_command=f'docker exec {DBT_CONTAINER} dbt docs generate --profiles-dir {DBT_PROFILES_DIR}',
+    task_id="generate_dbt_docs",
+    bash_command=f"docker exec {DBT_CONTAINER} dbt docs generate --profiles-dir {DBT_PROFILES_DIR}",
     dag=dag,
 )
 
 end_success = EmptyOperator(
-    task_id='end_success',
+    task_id="end_success",
     dag=dag,
 )
+
 
 # Failure Notification with detailed context
 def build_failure_message(context):
     """Build detailed failure notification message with debugging context."""
     from datetime import datetime, timezone
-    
-    task_instance = context.get('task_instance')
-    dag_run = context.get('dag_run')
-    execution_date = context.get('execution_date')
-    exception = context.get('exception')
-    
+
+    task_instance = context.get("task_instance")
+    dag_run = context.get("dag_run")
+    execution_date = context.get("execution_date")
+    exception = context.get("exception")
+
     # Get task details
-    dag_id = dag_run.dag_id if dag_run else 'unknown'
-    task_id = task_instance.task_id if task_instance else 'unknown'
+    dag_id = dag_run.dag_id if dag_run else "unknown"
+    task_id = task_instance.task_id if task_instance else "unknown"
     try_number = task_instance.try_number if task_instance else 0
     max_tries = task_instance.max_tries if task_instance else 0
-    
+
     # Calculate duration if available
     start_time = dag_run.start_date if dag_run else None
     end_time = datetime.now(timezone.utc)
-    duration = f"{(end_time - start_time).total_seconds() / 60:.2f} minutes" if start_time else "Unknown"
-    
+    duration = (
+        f"{(end_time - start_time).total_seconds() / 60:.2f} minutes"
+        if start_time
+        else "Unknown"
+    )
+
     # Get log URL
     log_url = task_instance.log_url if task_instance else "N/A"
-    
+
     # Determine failure stage
     failure_stage = "Unknown"
     if task_id:
@@ -161,11 +166,11 @@ def build_failure_message(context):
             failure_stage = "DBT Dependencies"
         elif "docs" in task_id.lower():
             failure_stage = "Documentation Generation"
-    
+
     # Build retry status
     retry_status = f"Attempt {try_number} of {max_tries}"
     will_retry = try_number < max_tries
-    
+
     message = f"""
 :red_circle: *DBT Data Pipeline - FAILURE ALERT*
 
@@ -202,23 +207,25 @@ def build_failure_message(context):
     """
     return message
 
+
 def send_failure_notification(**context):
     """Send detailed failure notification to Slack."""
     import os
     import requests
-    
-    webhook_url = os.getenv('AIRFLOW_CONN_SLACK_WEBHOOK', '')
-    
+
+    webhook_url = os.getenv("AIRFLOW_CONN_SLACK_WEBHOOK", "")
+
     # Parse JSON format if needed
-    if webhook_url.startswith('{'):
+    if webhook_url.startswith("{"):
         import json
+
         try:
             conn_data = json.loads(webhook_url)
-            webhook_url = conn_data.get('password', '')
+            webhook_url = conn_data.get("password", "")
         except Exception:
             pass
-    
-    if webhook_url and webhook_url.startswith('http'):
+
+    if webhook_url and webhook_url.startswith("http"):
         message = build_failure_message(context)
         try:
             response = requests.post(webhook_url, json={"text": message})
@@ -227,26 +234,28 @@ def send_failure_notification(**context):
             return f"Failed to send notification: {e}"
     return "No webhook URL configured"
 
+
 notify_failure = PythonOperator(
-    task_id='notify_failure',
+    task_id="notify_failure",
     python_callable=send_failure_notification,
     trigger_rule=TriggerRule.ONE_FAILED,
     dag=dag,
 )
 
+
 # Success Notification with detailed summary
 def build_success_message(context):
     """Build detailed success notification message with pipeline metrics."""
     from datetime import datetime, timezone
-    
-    dag_run = context['dag_run']
-    execution_date = context['execution_date']
-    
+
+    dag_run = context["dag_run"]
+    execution_date = context["execution_date"]
+
     # Calculate pipeline duration (handle timezone-aware datetimes)
     start_time = dag_run.start_date
     end_time = datetime.now(timezone.utc)
     duration = (end_time - start_time).total_seconds() / 60
-    
+
     message = f"""
 :white_check_mark: *DBT Data Pipeline - Successfully Completed*
 
@@ -261,23 +270,25 @@ def build_success_message(context):
     """
     return message
 
+
 def send_success_notification(**context):
     """Send detailed success notification to Slack."""
     import os
     import requests
-    
-    webhook_url = os.getenv('AIRFLOW_CONN_SLACK_WEBHOOK', '')
-    
+
+    webhook_url = os.getenv("AIRFLOW_CONN_SLACK_WEBHOOK", "")
+
     # Parse JSON format if needed
-    if webhook_url.startswith('{'):
+    if webhook_url.startswith("{"):
         import json
+
         try:
             conn_data = json.loads(webhook_url)
-            webhook_url = conn_data.get('password', '')
+            webhook_url = conn_data.get("password", "")
         except Exception:
             pass
-    
-    if webhook_url and webhook_url.startswith('http'):
+
+    if webhook_url and webhook_url.startswith("http"):
         message = build_success_message(context)
         try:
             response = requests.post(webhook_url, json={"text": message})
@@ -286,8 +297,9 @@ def send_success_notification(**context):
             return f"Failed to send notification: {e}"
     return "No webhook URL configured"
 
+
 notify_success = PythonOperator(
-    task_id='notify_success',
+    task_id="notify_success",
     python_callable=send_success_notification,
     trigger_rule=TriggerRule.ALL_SUCCESS,
     dag=dag,
