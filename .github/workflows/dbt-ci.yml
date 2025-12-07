@@ -28,7 +28,7 @@ jobs:
 
       - name: Install SQLFluff
         run: |
-          pip install sqlfluff sqlfluff-templater-dbt
+          pip install sqlfluff sqlfluff-templater-dbt dbt-sqlserver
           
       - name: Lint SQL files
         run: |
@@ -71,13 +71,6 @@ jobs:
       - name: Prepare dbt profile
         run: cp dbt/profiles.ci.yml dbt/profiles.yml
 
-      - name: Install SQL Server ODBC driver
-        run: |
-          curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-          sudo curl -o /etc/apt/sources.list.d/microsoft-prod.list https://packages.microsoft.com/config/ubuntu/22.04/prod.list
-          sudo apt-get update
-          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -92,10 +85,10 @@ jobs:
           cd dbt
           dbt deps
 
-      - name: Compile DBT models
+      - name: Parse DBT project
         run: |
           cd dbt
-          dbt compile --profiles-dir .
+          dbt parse --profiles-dir .
 
       - name: Upload compiled artifacts
         uses: actions/upload-artifact@v4
@@ -113,6 +106,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Prepare dbt profile
+        run: cp dbt/profiles.ci.yml dbt/profiles.yml
 
       - name: Set up Python
         uses: actions/setup-python@v4
