@@ -71,6 +71,13 @@ jobs:
       - name: Prepare dbt profile
         run: cp dbt/profiles.ci.yml dbt/profiles.yml
 
+      - name: Install SQL Server ODBC driver
+        run: |
+          curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+          sudo curl -o /etc/apt/sources.list.d/microsoft-prod.list https://packages.microsoft.com/config/ubuntu/22.04/prod.list
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
