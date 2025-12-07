@@ -1,0 +1,22 @@
+dbt_airflow_project:
+  target: dev
+  outputs:
+    dev:
+      type: sqlserver
+      driver: 'ODBC Driver 17 for SQL Server'
+      server: "{{ env_var('DBT_SQLSERVER_SERVER', 'localhost') }}"
+      port: "{{ env_var('DBT_SQLSERVER_PORT', '1433') }}"
+      database: "{{ env_var('DBT_SQLSERVER_DATABASE', 'tempdb') }}"
+      schema: "{{ env_var('DBT_SQLSERVER_SCHEMA', 'dbo') }}"
+      user: "{{ env_var('DBT_SQLSERVER_USER', 'sa') }}"
+      password: "{{ env_var('DBT_SQLSERVER_PASSWORD', 'Passw0rd!') }}"
+      windows_login: False
+      encrypt: False
+      trust_cert: True
+      threads: 4
+      timeout_seconds: 300
+      retries: 3
+      authentication: sql
+      keepalives_idle: 0
+      application_name: dbt_airflow_project
+      retry_on_error: True
