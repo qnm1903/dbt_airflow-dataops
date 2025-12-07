@@ -57,34 +57,73 @@ dbt_airflow_project/
 #### 1. Airflow Components
 - **dags/**:
   - Purpose: Stores Airflow DAG (Directed Acyclic Graph) definitions
+  - Contents: Python files defining workflow orchestration
+  - Key File: `dbt_dag.py` - Orchestrates the DBT transformation pipeline
   - Usage: Schedules and monitors DBT model runs and tests
 
 - **logs/**:
   - Purpose: Contains Airflow execution logs
+  - Usage: Debugging and monitoring task execution
   - Retention: Typically keeps logs for last 30 days
 
 #### 2. DBT Components
 - **models/staging/**:
   - Purpose: First layer of transformation
+  - Contents: SQL models that clean and standardize raw data
+  - Example: `stg_sales_orders.sql` combines and standardizes sales order tables
   - Materialization: Usually materialized as views for flexibility
 
 - **models/marts/**:
   - Purpose: Final transformation layer
+  - Contents: Business-level transformations ready for reporting
+  - Materialization: Usually materialized as tables for performance
   - Usage: Direct connection to BI tools
 
 - **dbt_project.yml**:
   - Purpose: DBT project configuration
+  - Contents:
+    - Project name and version
+    - Model configurations
+    - Materialization settings
+    - Custom macro configurations
 
 - **packages.yml**:
   - Purpose: Manages external DBT packages
+  - Current Packages:
+    - dbt-utils: Provides additional SQL macros and functions
   - Usage: Install packages using `dbt deps`
 
 - **profiles.yml**:
   - Purpose: Database connection configuration
+  - Contents:
+    - Connection credentials
+    - Target database settings
+    - Environment-specific configurations
 
 #### 3. Docker Components
 - **docker-compose.yml**:
   - Purpose: Container orchestration
+  - Services Defined:
+    1. **airflow-webserver**: Web interface for Airflow
+       - Port: 8080
+       - Usage: Monitor and manage DAGs
+
+    2. **airflow-scheduler**: Airflow task scheduler
+       - Purpose: Executes DAGs based on schedule
+       - Dependencies: PostgreSQL for metadata
+
+    3. **postgres**: Airflow metadata database
+       - Purpose: Stores Airflow state and history
+       - Port: 5432
+
+    4. **sqlserver**: Source database
+       - Purpose: Stores raw data
+       - Port: 1433
+       - Database: AdventureWorks
+
+    5. **dbt**: DBT transformation container
+       - Purpose: Executes DBT commands
+       - Mounts: ./dbt directory for access to models
 
 ### Removed Components
 The following components from the original structure were removed as they weren't essential:
@@ -96,17 +135,17 @@ The following components from the original structure were removed as they weren'
 ## Container Workflow
 1. **Data Flow**:
    ```
-   SQL Server → DBT → Target Database
+   SQL Server (source) → DBT (transformation) → SQL Server (transformed)
    ```
 
 2. **Process Flow**:
    ```
-   Extract → Transform → Load
+   Airflow Scheduler → Triggers DBT Container → Runs Models → Updates Status
    ```
 
 3. **Monitoring Flow**:
    ```
-   Airflow DAGs → Logs → Alerts
+   Airflow UI → View Logs → Check Task Status → Monitor Transformations
    ```
 
 ## Step-by-Step Implementation Guide
@@ -154,22 +193,41 @@ macro-paths: ["macros"]
 target-path: "target"
 clean-targets:
     - "target"
+    - "dbt_packages"
     - "logs"
 
 models:
   dbt_sqlserver_project:
+    staging:
+      materialized: view
+    intermediate:
+      materialized: table
+    marts:
+      materialized: table
 ```
 
 3.2. Configure DBT profiles (`profiles.yml`):
 ```yaml
 default:
   target: dev
+  outputs:
+    dev:
+      type: sqlserver
+      driver: 'ODBC Driver 17 for SQL Server'
+      server: sqlserver
+      port: 1433
+      database: AdventureWorks
+      schema: dbo
+      user: sa
+      password: YourStrong@Passw0rd
+      threads: 4
 ```
 
 3.3. Install DBT packages (`packages.yml`):
 ```yaml
 packages:
   - package: dbt-labs/dbt_utils
+    version: 1.1.1
 ```
 
 ### 4. Model Development
@@ -187,7 +245,17 @@ source_sales_order_detail as (
 
 select
     soh.SalesOrderID,
+    sod.SalesOrderDetailID as order_detail_id,
     soh.OrderDate,
+    soh.DueDate,
+    soh.ShipDate,
+    soh.Status as order_status,
+    soh.CustomerID,
+    soh.SalesPersonID,
+    sod.ProductID,
+    sod.OrderQty,
+    sod.UnitPrice,
+    sod.UnitPriceDiscount,
     sod.LineTotal
 from source_sales_order_header soh
 left join source_sales_order_detail sod
@@ -200,6 +268,18 @@ version: 2
 
 models:
   - name: stg_sales_orders
+    columns:
+      - name: sales_order_id
+        tests:
+          - not_null
+      - name: order_detail_id
+        tests:
+          - not_null
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - sales_order_id
+            - order_detail_id
 ```
 
 ### 5. Airflow DAG Configuration
@@ -213,6 +293,7 @@ from datetime import datetime, timedelta
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
+    'start_date': datetime(2025, 4, 13),
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
@@ -222,21 +303,25 @@ default_args = {
 dag = DAG(
     'dbt_transform',
     default_args=default_args,
-    description='Run DBT models',
+    description='DBT transformation pipeline',
     schedule_interval=timedelta(days=1)
 )
 
 dbt_run = DockerOperator(
     task_id='dbt_run',
-    image='dbt_image',
+    image='dbt_airflow_project-dbt',
     command='dbt run',
+    docker_url='unix://var/run/docker.sock',
+    network_mode='bridge',
     dag=dag
 )
 
 dbt_test = DockerOperator(
     task_id='dbt_test',
-    image='dbt_image',
+    image='dbt_airflow_project-dbt',
     command='dbt test',
+    docker_url='unix://var/run/docker.sock',
+    network_mode='bridge',
     dag=dag
 )
 
@@ -272,7 +357,8 @@ docker-compose exec dbt dbt test
   - Password: airflow
 - SQL Server:
   - Host: localhost
-  - User: sa
+  - Port: 1433
+  - Username: sa
   - Password: YourStrong@Passw0rd
 
 ## Why Containers?

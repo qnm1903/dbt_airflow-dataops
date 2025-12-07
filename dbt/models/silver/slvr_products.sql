@@ -99,12 +99,12 @@ product_enrichment as (
     -- Metadata
     case
       when sell_end_date is null then 'ACTIVE'
-      when sell_end_date > CAST(getdate() AS DATE) then 'ACTIVE'
+      when sell_end_date > cast(getdate() as DATE) then 'ACTIVE'
       else 'DISCONTINUED'
     end as product_status,
     case
       when sell_start_date is not null
-        then datediff(day, sell_start_date, coalesce(sell_end_date, CAST(getdate() AS DATE)))
+        then datediff(day, sell_start_date, coalesce(sell_end_date, cast(getdate() as DATE)))
     end as days_in_market,
     getdate() as silver_created_at
 

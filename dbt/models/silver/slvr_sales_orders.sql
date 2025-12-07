@@ -145,10 +145,10 @@ sales_enrichment as (
     end as order_season,
     getdate() as silver_created_at
 
-  from bronze_sales AS s
-  left join bronze_customers AS c
+  from bronze_sales as s
+  left join bronze_customers as c
     on s.customer_id = c.customer_id
-  left join bronze_products AS p
+  left join bronze_products as p
     on s.product_id = p.product_id
 
     -- Data quality filters for silver layer

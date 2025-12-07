@@ -28,8 +28,8 @@ cleaned as (
     coalesce(p.EmailPromotion, 0) as email_promotion,
     GETDATE() as bronze_created_at
 
-  from customers_raw AS c
-  left join person_raw AS p
+  from customers_raw as c
+  left join person_raw as p
     on c.PersonID = p.BusinessEntityID
 
     -- Data quality filters

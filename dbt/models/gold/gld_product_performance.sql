@@ -96,7 +96,7 @@ product_sales_metrics as (
     case when min(s.order_date) is not null then datediff(day, min(s.order_date), max(s.order_date)) end
       as days_in_sales,
     case
-      when max(s.order_date) is not null then datediff(day, max(s.order_date), CAST(getdate() AS DATE))
+      when max(s.order_date) is not null then datediff(day, max(s.order_date), cast(getdate() as DATE))
     end as days_since_last_sale,
 
     -- Order value analysis

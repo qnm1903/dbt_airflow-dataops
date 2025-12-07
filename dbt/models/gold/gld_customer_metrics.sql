@@ -53,17 +53,17 @@ customer_transaction_metrics as (
 
     -- Derived Date Logic
     datediff(day, o.first_order_date, o.last_order_date) as customer_tenure_days,
-    datediff(day, o.last_order_date, CAST(getdate() AS DATE)) as days_since_last_order,
+    datediff(day, o.last_order_date, cast(getdate() as DATE)) as days_since_last_order,
 
     -- Metrics from Item Aggregation
     coalesce(i.total_line_items, 0) as total_line_items,
     coalesce(i.unique_products_purchased, 0) as unique_products_purchased,
     coalesce(i.unique_categories_purchased, 0) as unique_categories_purchased
 
-  from customers AS c
-  left join customer_order_metrics AS o
+  from customers as c
+  left join customer_order_metrics as o
     on c.customer_id = o.customer_id
-  left join customer_item_metrics AS i
+  left join customer_item_metrics as i
     on c.customer_id = i.customer_id
 ),
 

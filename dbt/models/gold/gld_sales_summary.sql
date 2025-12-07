@@ -81,7 +81,7 @@ daily_sales_metrics as (
     avg(s.days_to_ship) as avg_days_to_ship,
     avg(s.days_early_late) as avg_days_early_late
 
-  from sales_details AS s
+  from sales_details as s
 
   group by
     cast(s.order_date as date), year(s.order_date), month(s.order_date),

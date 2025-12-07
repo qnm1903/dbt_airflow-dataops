@@ -50,8 +50,8 @@ cleaned as (
         -- Manufacturing
         coalesce(p.DaysToManufacture, 0) as days_to_manufacture,
         p.ProductLine as product_line,
-        p.Class as class,
-        p.Style as style,
+        p.[Class] as class,
+        p.[Style] as style,
         
         -- Hierarchy
         p.ProductSubcategoryID as product_subcategory_id,

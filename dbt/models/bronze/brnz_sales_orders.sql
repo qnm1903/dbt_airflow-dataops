@@ -58,8 +58,8 @@ cleaned as (
     end as line_total,
     GETDATE() as bronze_created_at
 
-  from header_raw AS h
-  inner join detail_raw AS d
+  from header_raw as h
+  inner join detail_raw as d
     on h.SalesOrderID = d.SalesOrderID
 
     -- Data quality filters
