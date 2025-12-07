@@ -10,7 +10,8 @@ RUN apt-get update \
         unixodbc-dev \
         curl \
         gnupg2 \
-        docker.io \
+        ca-certificates \
+        lsb-release \
         git \
     && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
     && curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list \
@@ -19,8 +20,16 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Add airflow user to docker group
-RUN usermod -aG docker airflow
+# Install Docker CLI (latest version)
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
+    && apt-get update \
+    && apt-get install -y docker-ce-cli \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create docker group and add airflow user to it
+RUN groupadd -f docker && usermod -aG docker airflow
 
 # Switch back to airflow user
 USER airflow

@@ -1,0 +1,13 @@
+[sqlfluff]
+dialect = tsql
+templater = dbt
+max_line_length = 120
+exclude_rules = L009,L031,CP02,RF01
+sql_file_exts = .sql,.sql.j2
+
+[sqlfluff:templater:dbt]
+project_dir = .
+profiles_dir = .
+
+[sqlfluff:indentation]
+tab_space_size = 2

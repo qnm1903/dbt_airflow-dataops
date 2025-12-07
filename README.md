@@ -1,7 +1,12 @@
 # DBT + Airflow + SQL Server DataOps Project
 
-![DBT CI](https://github.com/NgocLe-101/dbt-airflow-dataops/workflows/DBT%20CI%20Pipeline/badge.svg)
-![Python Quality](https://github.com/NgocLe-101/dbt-airflow-dataops/workflows/Python%20Code%20Quality/badge.svg)
+## Pipeline Status
+
+| Workflow | Status |
+|----------|--------|
+| CI Pipeline | ![CI](https://github.com/NgocLe-101/dbt-airflow-dataops/workflows/CI%20Pipeline/badge.svg) |
+| Deploy Dev | ![Deploy Dev](https://github.com/NgocLe-101/dbt-airflow-dataops/workflows/Deploy%20to%20Development/badge.svg?branch=develop) |
+| Deploy Prod | ![Deploy Prod](https://github.com/NgocLe-101/dbt-airflow-dataops/workflows/Deploy%20to%20Production/badge.svg?branch=main) |
 
 # DBT and Airflow Data Pipeline Project
 

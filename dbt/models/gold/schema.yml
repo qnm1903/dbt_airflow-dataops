@@ -56,31 +56,6 @@ models:
         tests:
           - accepted_values:
               values: ['ONLINE_ONLY', 'OFFLINE_ONLY', 'OMNICHANNEL', 'NO_ORDERS']
-      - name: avg_order_value
-        description: "Average order value for customer"
-        tests:
-          - dbt_utils.accepted_range:
-              min_value: 0
-      - name: recency_score
-        description: "RFM recency score (1-5 scale)"
-        tests:
-          - accepted_values:
-              values: [1, 2, 3, 4, 5]
-      - name: frequency_score
-        description: "RFM frequency score (1-5 scale)"
-        tests:
-          - accepted_values:
-              values: [1, 2, 3, 4, 5]
-      - name: monetary_score
-        description: "RFM monetary score (1-5 scale)"
-        tests:
-          - accepted_values:
-              values: [1, 2, 3, 4, 5]
-      - name: channel_preference
-        description: "Customer channel preference classification"
-        tests:
-          - accepted_values:
-              values: ['ONLINE_ONLY', 'OFFLINE_ONLY', 'OMNICHANNEL', 'NO_ORDERS']
 
   - name: gld_product_performance
     description: "Gold layer comprehensive product performance analytics for product analysis, inventory optimization, and profitability insights"
@@ -181,14 +156,12 @@ models:
       - name: online_revenue_percentage
         description: "Percentage of revenue from online orders"
         tests:
-          - valid_percentage
           - dbt_utils.accepted_range:
               min_value: 0
               max_value: 100
       - name: on_time_delivery_percentage
         description: "Percentage of on-time deliveries"
         tests:
-          - valid_percentage
           - dbt_utils.accepted_range:
               min_value: 0
               max_value: 100

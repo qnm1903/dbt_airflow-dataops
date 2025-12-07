@@ -117,7 +117,7 @@ sources:
             description: "Standard cost of the product"
           - name: ModifiedDate
             description: "Date and time the record was last updated"
-          
+
       - name: ProductSubcategory
         description: "Product subcategories"
         loaded_at_field: ModifiedDate
@@ -130,7 +130,7 @@ sources:
             description: "Subcategory description"
           - name: ModifiedDate
             description: "Date and time the record was last updated"
-            
+
       - name: ProductCategory
         description: "High-level product categorization"
         loaded_at_field: ModifiedDate

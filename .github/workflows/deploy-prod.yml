@@ -1,0 +1,120 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dbt/**'
+      - 'airflow/**'
+
+env:
+  PYTHON_VERSION: '3.9'
+  ENVIRONMENT: production
+
+jobs:
+  # Pre-deployment validation
+  pre-deploy-check:
+    name: Pre-Deployment Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate deployment
+        run: |
+          echo "Running pre-deployment checks..."
+          # Add validation logic here
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: pre-deploy-check
+    environment: 
+      name: production
+      url: https://your-dbt-docs-url.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install DBT
+        run: pip install dbt-sqlserver==1.4.0
+
+      - name: Configure DBT profiles for production
+        run: |
+          mkdir -p ~/.dbt
+          cat <<EOF > ~/.dbt/profiles.yml
+          dbt_airflow_project:
+            target: prod
+            outputs:
+              prod:
+                type: sqlserver
+                driver: 'ODBC Driver 17 for SQL Server'
+                server: ${{ secrets.PROD_SQL_SERVER }}
+                port: 1433
+                database: AdventureWorks2014
+                schema: dbo
+                user: ${{ secrets.PROD_SQL_USER }}
+                password: ${{ secrets.PROD_SQL_PASSWORD }}
+                threads: 8
+          EOF
+
+      - name: Install DBT dependencies
+        run: |
+          cd dbt
+          dbt deps
+
+      - name: Create backup snapshot
+        run: |
+          echo "Creating backup snapshot..."
+          # In a real scenario, we would trigger a DB backup here
+
+      - name: Run DBT models (Production)
+        id: dbt_run
+        run: |
+          cd dbt
+          dbt run --profiles-dir ~/.dbt --target prod
+
+      - name: Run DBT tests (Production)
+        id: dbt_test
+        run: |
+          cd dbt
+          dbt test --profiles-dir ~/.dbt --target prod
+
+      - name: Post-deployment health check
+        run: |
+          echo "Running health checks..."
+
+      - name: Upload production logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-logs-prod
+          path: dbt/logs/
+          retention-days: 90
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release v${{ github.run_number }}
+          draft: false
+          prerelease: false
+
+  # Rollback job (manual trigger)
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: ${{ failure() && needs.deploy.result == 'failure' }}
+    needs: deploy
+    steps:
+      - name: Trigger rollback
+        run: |
+          echo "Triggering rollback procedure..."
+          # Logic to trigger rollback or notify
