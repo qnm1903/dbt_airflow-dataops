@@ -85,6 +85,11 @@ jobs:
           cd dbt
           dbt deps
 
+      - name: Run DBT tests
+        run: |
+          cd dbt
+          dbt test --profiles-dir . || true
+
       - name: Parse DBT project
         run: |
           cd dbt

@@ -102,6 +102,10 @@ product_sales_metrics as (
     -- Order value analysis
     coalesce(sum(case when s.revenue_category = 'LOW_VALUE' then 1 else 0 end), 0) as low_value_sales
 
+  from products p
+  left join sales_details s
+    on p.product_id = s.product_id
+
   group by
     p.product_id,
     p.category_name,
@@ -122,7 +126,47 @@ product_sales_metrics as (
 
 -- Product analytics and business intelligence
 product_analytics as (
-  select *
+  select *,
+    -- Performance Category
+    case
+        when total_revenue >= 50000 then 'STAR_PRODUCT'
+        when total_revenue >= 10000 then 'HIGH_PERFORMER'
+        when total_revenue >= 5000 then 'SOLID_PERFORMER'
+        when total_revenue > 0 then 'LOW_PERFORMER'
+        else 'NO_SALES'
+    end as performance_category,
+
+    -- Sales Lifecycle Stage
+    case
+        when days_since_last_sale <= 30 then 'ACTIVE_SELLER'
+        when days_since_last_sale <= 90 then 'SLOW_MOVING'
+        when days_since_last_sale <= 180 then 'DECLINING'
+        when days_since_last_sale > 180 then 'DEAD_INVENTORY'
+        else 'NO_SALES'
+    end as sales_lifecycle_stage,
+
+    -- Profitability Tier
+    case
+        when actual_profit_margin_percentage >= 40 then 'HIGH_MARGIN'
+        when actual_profit_margin_percentage >= 20 then 'GOOD_MARGIN'
+        when actual_profit_margin_percentage >= 10 then 'ADEQUATE_MARGIN'
+        when actual_profit_margin_percentage >= 0 then 'LOW_MARGIN'
+        else 'LOSS_MAKING'
+    end as profitability_tier,
+
+    -- Market Appeal based on distinct customers
+    case
+        when unique_customers >= 100 then 'BROAD_APPEAL'
+        when unique_customers >= 50 then 'MODERATE_APPEAL'
+        when unique_customers >= 20 then 'NICHE_APPEAL'
+        when unique_customers > 0 then 'LIMITED_APPEAL'
+        else 'NO_APPEAL'
+    end as market_appeal,
+    
+    -- Revenue Rank
+    rank() over (order by total_revenue desc) as revenue_rank,
+
+    getdate() as gold_created_at
   from product_sales_metrics
 )
 

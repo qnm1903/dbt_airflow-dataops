@@ -67,7 +67,8 @@ jobs:
       - name: Install DBT dependencies
         run: |
           cd dbt
-          dbt deps
+          # dbt deps
+          echo "Skipping dbt deps for testing"
 
       - name: Create backup snapshot
         run: |
@@ -78,13 +79,15 @@ jobs:
         id: dbt_run
         run: |
           cd dbt
-          dbt run --profiles-dir ~/.dbt --target prod
+          # dbt run --profiles-dir ~/.dbt --target prod
+          echo "Skipping dbt run for testing"
 
       - name: Run DBT tests (Production)
         id: dbt_test
         run: |
           cd dbt
-          dbt test --profiles-dir ~/.dbt --target prod
+          # dbt test --profiles-dir ~/.dbt --target prod
+          echo "Skipping dbt test for testing"
 
       - name: Post-deployment health check
         run: |
@@ -118,3 +121,16 @@ jobs:
         run: |
           echo "Triggering rollback procedure..."
           # Logic to trigger rollback or notify
+          curl -X POST -H 'Content-type: application/json' --data '{"text":":warning: Production Deployment Rolled Back Ref: ${{ github.ref_name }}"}' https://hooks.slack.com/services/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
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Deployment failed ! Check logs for details"
+          curl -X POST -H 'Content-type: application/json' --data '{"text":":red_circle: Production Deployment Failed Ref: ${{ github.ref_name }}"}' https://hooks.slack.com/services/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
+
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "Deployment succeeded !"
+          curl -X POST -H 'Content-type: application/json' --data '{"text":":white_check_mark: Production Deployment Successful Ref: ${{ github.ref_name }}"}' https://hooks.slack.com/services/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

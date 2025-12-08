@@ -19,6 +19,44 @@ products as (
   select * from {{ ref('slvr_products') }}
 ),
 
+customer_item_metrics as (
+  select
+    customer_id,
+    count(*) as total_line_items,
+    count(distinct product_id) as unique_products_purchased,
+    count(distinct category_name) as unique_categories_purchased
+  from sales_details
+  group by customer_id
+),
+
+customer_order_metrics as (
+  select
+    customer_id,
+    min(order_date) as first_order_date,
+    max(order_date) as last_order_date,
+    count(distinct sales_order_id) as total_orders,
+    sum(total_order_value) as lifetime_revenue,
+    avg(total_order_value) as avg_order_value,
+    0 as median_order_value,
+    min(total_order_value) as min_order_value,
+    max(total_order_value) as max_order_value,
+    stdev(total_order_value) as order_value_std_dev,
+    sum(total_quantity) as total_items_purchased,
+    avg(total_quantity) as avg_items_per_order,
+    sum(total_discount_amount) as total_discounts_received,
+    avg(overall_discount_percentage) as avg_discount_percentage,
+    sum(case when overall_discount_percentage > 0 then 1 else 0 end) as orders_with_discounts,
+    sum(case when order_channel = 'Online' then 1 else 0 end) as online_orders,
+    sum(case when order_channel = 'Offline' then 1 else 0 end) as offline_orders,
+    avg(total_line_items * 1.0) as avg_lines_per_order,
+    avg(unique_products * 1.0) as avg_unique_products_per_order,
+    sum(case when days_early_late <= 0 then 1 else 0 end) as on_time_orders,
+    sum(case when order_status = 5 then 1 else 0 end) as completed_orders,
+    sum(case when order_status = 6 then 1 else 0 end) as cancelled_orders
+  from order_summary
+  group by customer_id
+),
+
 customer_transaction_metrics as (
   select
     c.customer_id,
@@ -71,6 +109,51 @@ customer_transaction_metrics as (
 customer_analytics as (
   select
     *,
+    -- Customer Segmentation based on Lifetime Revenue
+    case
+        when lifetime_revenue >= 5000 then 'VIP'
+        when lifetime_revenue >= 2500 then 'HIGH_VALUE'
+        when lifetime_revenue >= 1000 then 'MEDIUM_VALUE'
+        when lifetime_revenue > 0 then 'LOW_VALUE'
+        else 'ONE_TIME_BUYER' -- Fallback for very low or single purchase
+    end as customer_value_segment,
+
+    -- Customer Lifecycle Stage based on recency
+    case
+        when days_since_last_order <= 90 then 'ACTIVE'
+        when days_since_last_order <= 180 then 'AT_RISK'
+        when days_since_last_order <= 365 then 'LAPSED'
+        when days_since_last_order > 365 then 'CHURNED'
+        else 'PROSPECT' -- No orders
+    end as lifecycle_stage,
+
+    -- RFM Scores (Simplified Logic for Demo)
+    case when days_since_last_order <= 30 then 5
+         when days_since_last_order <= 90 then 4
+         when days_since_last_order <= 180 then 3
+         when days_since_last_order <= 365 then 2
+         else 1 end as recency_score,
+    
+    case when total_orders >= 20 then 5
+         when total_orders >= 10 then 4
+         when total_orders >= 5 then 3
+         when total_orders >= 2 then 2
+         else 1 end as frequency_score,
+
+    case when lifetime_revenue >= 5000 then 5
+         when lifetime_revenue >= 2500 then 4
+         when lifetime_revenue >= 1000 then 3
+         when lifetime_revenue >= 500 then 2
+         else 1 end as monetary_score,
+
+    -- Channel Preference
+    case 
+        when online_orders > 0 and offline_orders = 0 then 'ONLINE_ONLY'
+        when offline_orders > 0 and online_orders = 0 then 'OFFLINE_ONLY'
+        when online_orders > 0 and offline_orders > 0 then 'OMNICHANNEL'
+        else 'NO_ORDERS'
+    end as channel_preference,
+    
     getdate() as gold_created_at
 
   from customer_transaction_metrics

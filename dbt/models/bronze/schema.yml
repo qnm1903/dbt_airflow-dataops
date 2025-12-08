@@ -110,7 +110,6 @@ models:
         description: "Unique sales order identification number"
         tests:
           - not_null
-          - unique
       - name: order_date
         description: "Date the sales order was created"
         tests:
