@@ -2,7 +2,7 @@
 DBT Transformation Pipeline DAG - Full Refresh
 
 This DAG orchestrates the DBT data transformation pipeline with the --full-refresh flag.
-Use this DAG when logic changes require rebuilding tables from scratch, 
+Use this DAG when logic changes require rebuilding tables from scratch,
 or to ensure data consistency by reprocessing all historical data.
 
 - Bronze → Silver → Gold layer execution (Full Refresh)
@@ -146,11 +146,7 @@ def build_failure_message(context):
     # Calculate duration if available
     start_time = dag_run.start_date if dag_run else None
     end_time = datetime.now(timezone.utc)
-    duration = (
-        f"{(end_time - start_time).total_seconds() / 60:.2f} minutes"
-        if start_time
-        else "Unknown"
-    )
+    duration = f"{(end_time - start_time).total_seconds() / 60:.2f} minutes" if start_time else "Unknown"
 
     # Get log URL
     log_url = task_instance.log_url if task_instance else "N/A"
