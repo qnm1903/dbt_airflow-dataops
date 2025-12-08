@@ -35,7 +35,7 @@ default_args = {
     "retry_delay": timedelta(minutes=1),
     "retry_exponential_backoff": True,
     "max_retry_delay": timedelta(minutes=30),
-    "execution_timeout": timedelta(hours=4), # Increased timeout for full refresh
+    "execution_timeout": timedelta(hours=4),  # Increased timeout for full refresh
 }
 
 dag = DAG(
@@ -75,7 +75,8 @@ dbt_deps = BashOperator(
 # Bronze Layer - Full Refresh
 run_bronze = BashOperator(
     task_id="run_bronze_models",
-    bash_command=f"docker exec {DBT_CONTAINER} dbt run --select bronze --profiles-dir {DBT_PROFILES_DIR} --full-refresh",
+    bash_command=f"docker exec {DBT_CONTAINER} dbt run --select bronze --profiles-dir {DBT_PROFILES_DIR} "
+    f"--full-refresh",
     dag=dag,
 )
 
@@ -88,7 +89,8 @@ test_bronze = BashOperator(
 # Silver Layer - Full Refresh
 run_silver = BashOperator(
     task_id="run_silver_models",
-    bash_command=f"docker exec {DBT_CONTAINER} dbt run --select silver --profiles-dir {DBT_PROFILES_DIR} --full-refresh",
+    bash_command=f"docker exec {DBT_CONTAINER} dbt run --select silver --profiles-dir {DBT_PROFILES_DIR} "
+    f"--full-refresh",
     dag=dag,
 )
 
@@ -101,7 +103,8 @@ test_silver = BashOperator(
 # Gold Layer - Full Refresh
 run_gold = BashOperator(
     task_id="run_gold_models",
-    bash_command=f"docker exec {DBT_CONTAINER} dbt run --select gold --profiles-dir {DBT_PROFILES_DIR} --full-refresh",
+    bash_command=f"docker exec {DBT_CONTAINER} dbt run --select gold --profiles-dir {DBT_PROFILES_DIR} "
+    f"--full-refresh",
     dag=dag,
 )
 
