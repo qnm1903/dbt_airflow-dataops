@@ -29,7 +29,7 @@ jobs:
       - name: Install SQLFluff
         run: |
           pip install sqlfluff sqlfluff-templater-dbt dbt-sqlserver
-          
+
       - name: Lint SQL files
         run: |
           cd dbt
@@ -135,7 +135,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload documentation
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dbt-docs
           path: |
