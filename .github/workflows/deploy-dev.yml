@@ -161,25 +161,57 @@ jobs:
         run: |
           echo "Cleaning up workspace and caches..."
 
-          # Xóa workspace
-          cd ${{ github.workspace }}\..
-          Remove-Item -Path "${{ github.workspace }}" -Recurse -Force -ErrorAction SilentlyContinue
+          # Lưu lại thông tin trước khi xóa
+          $workspacePath = "${{ github.workspace }}"
+          $runnerWorkDir = Split-Path (Split-Path $workspacePath -Parent) -Parent
+          echo "Workspace: $workspacePath"
+          echo "Runner work dir: $runnerWorkDir"
 
-          # Xóa Python pip cache
-          $pipCache = "$env:LOCALAPPDATA\pip\cache"
-          if (Test-Path $pipCache) {
-            Remove-Item -Path $pipCache -Recurse -Force -ErrorAction SilentlyContinue
-            echo "Cleared pip cache"
+          # Ra ngoài workspace để không bị lock
+          Set-Location $env:TEMP
+          Start-Sleep -Seconds 2
+
+          # Xóa workspace hiện tại
+          if (Test-Path $workspacePath) {
+            $wsSize = (Get-ChildItem $workspacePath -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB
+            Remove-Item -Path $workspacePath -Recurse -Force -ErrorAction SilentlyContinue
+            echo "Cleared workspace (~$([math]::Round($wsSize, 2)) MB)"
           }
 
-          # Xóa temp files của runner
-          $runnerTemp = "C:\Users\LENOVO\actions-runner\_work\_temp"
+          # Xóa các repo clones cũ trong runner
+          $repoName = "${{ github.event.repository.name }}"
+          $repoFolder = Join-Path $runnerWorkDir $repoName
+          if (Test-Path $repoFolder) {
+            Get-ChildItem -Path $repoFolder -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+              if ($_.FullName -ne $workspacePath) {
+                $size = (Get-ChildItem $_.FullName -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB
+                Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+                echo "Removed old clone (~$([math]::Round($size, 2)) MB)"
+              }
+            }
+          }
+
+          # Xóa temp files
+          $runnerTemp = Join-Path $runnerWorkDir "_temp"
           if (Test-Path $runnerTemp) {
-            Get-ChildItem $runnerTemp -Recurse | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-            echo "Cleared runner temp files"
+            $tempSize = (Get-ChildItem $runnerTemp -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB
+            Get-ChildItem $runnerTemp -Recurse -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+            echo "Cleared runner temp (~$([math]::Round($tempSize, 2)) MB)"
           }
 
           # Xóa Python __pycache__
-          Get-ChildItem -Path "C:\Users\LENOVO\actions-runner\_work" -Recurse -Directory -Filter "__pycache__" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          $pycacheCount = 0
+          Get-ChildItem -Path $runnerWorkDir -Recurse -Directory -Filter "__pycache__" -ErrorAction SilentlyContinue | ForEach-Object {
+            Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+            $pycacheCount++
+          }
+          if ($pycacheCount -gt 0) { echo "Cleared $pycacheCount __pycache__ directories" }
 
-          echo "Cleanup completed - freed maximum disk space"
+          # Xóa DBT logs (USERPROFILE = C:\Users\LENOVO)
+          $dbtLogs = Join-Path $env:USERPROFILE ".dbt\logs"
+          if (Test-Path $dbtLogs) {
+            Remove-Item -Path $dbtLogs -Recurse -Force -ErrorAction SilentlyContinue
+            echo "Cleared DBT logs at $dbtLogs"
+          }
+
+          echo "Cleanup completed"
