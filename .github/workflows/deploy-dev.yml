@@ -164,8 +164,6 @@ jobs:
           # Lưu lại thông tin trước khi xóa
           $workspacePath = "${{ github.workspace }}"
           $runnerWorkDir = Split-Path (Split-Path $workspacePath -Parent) -Parent
-          echo "Workspace: $workspacePath"
-          echo "Runner work dir: $runnerWorkDir"
 
           # Ra ngoài workspace để không bị lock
           Set-Location $env:TEMP
