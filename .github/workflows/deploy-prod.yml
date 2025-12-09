@@ -29,10 +29,10 @@ jobs:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: pre-deploy-check
-    environment: 
+    environment:
       name: production
       url: https://your-dbt-docs-url.com
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -46,6 +46,7 @@ jobs:
         run: pip install dbt-sqlserver==1.4.0
 
       - name: Configure DBT profiles for production
+        shell: bash
         run: |
           mkdir -p ~/.dbt
           cat <<EOF > ~/.dbt/profiles.yml
@@ -117,20 +118,52 @@ jobs:
     if: ${{ failure() && needs.deploy.result == 'failure' }}
     needs: deploy
     steps:
-      - name: Trigger rollback
+      - name: Trigger rollback (Windows)
+        if: runner.os == 'Windows'
         run: |
           echo "Triggering rollback procedure..."
-          # Logic to trigger rollback or notify
+          $body = @{text=":warning: Production Deployment Rolled Back Ref: ${{ github.ref_name }}"} | ConvertTo-Json
+          Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
+
+      - name: Trigger rollback (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          echo "Triggering rollback procedure..."
           curl -X POST -H 'Content-type: application/json' --data '{"text":":warning: Production Deployment Rolled Back Ref: ${{ github.ref_name }}"}' https://hooks.slack.com/services/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
 
-      - name: Notify on failure
-        if: failure()
+      - name: Notify on failure (Windows)
+        if: failure() && runner.os == 'Windows'
         run: |
-          echo "Deployment failed ! Check logs for details"
+          echo "Deployment failed! Check logs for details."
+          $body = @{text=":red_circle: Production Deployment Failed Ref: ${{ github.ref_name }}"} | ConvertTo-Json
+          Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
+
+      - name: Notify on failure (Linux)
+        if: failure() && runner.os == 'Linux'
+        shell: bash
+        run: |
+          echo "Deployment failed! Check logs for details."
           curl -X POST -H 'Content-type: application/json' --data '{"text":":red_circle: Production Deployment Failed Ref: ${{ github.ref_name }}"}' https://hooks.slack.com/services/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
 
-      - name: Notify on success
-        if: success()
+      - name: Notify on success (Windows)
+        if: success() && runner.os == 'Windows'
         run: |
-          echo "Deployment succeeded !"
+          echo "Deployment succeeded!"
+          $body = @{text=":white_check_mark: Production Deployment Successful Ref: ${{ github.ref_name }}"} | ConvertTo-Json
+          Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
+
+      - name: Notify on success (Linux)
+        if: success() && runner.os == 'Linux'
+        shell: bash
+        run: |
+          echo "Deployment succeeded!"
           curl -X POST -H 'Content-type: application/json' --data '{"text":":white_check_mark: Production Deployment Successful Ref: ${{ github.ref_name }}"}' https://hooks.slack.com/services/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
+
+      - name: Cleanup workspace
+        if: always()
+        shell: bash
+        run: |
+          echo "Cleaning up workspace..."
+          git clean -ffdx
+          echo "Cleanup completed"
