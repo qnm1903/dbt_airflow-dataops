@@ -41,6 +41,8 @@ jobs:
                 schema: dbo
                 user: ${{ secrets.DEV_SQL_USER }}
                 password: ${{ secrets.DEV_SQL_PASSWORD }}
+                encrypt: false
+                trust_cert: true
                 threads: 4
           "@ | Out-File -FilePath "$dbtDir\profiles.yml" -Encoding UTF8
 

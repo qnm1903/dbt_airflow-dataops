@@ -57,6 +57,8 @@ jobs:
                 schema: dbo
                 user: ${{ secrets.PROD_SQL_USER }}
                 password: ${{ secrets.PROD_SQL_PASSWORD }}
+                encrypt: false
+                trust_cert: true
                 threads: 8
           "@ | Out-File -FilePath "$dbtDir\profiles.yml" -Encoding UTF8
 
