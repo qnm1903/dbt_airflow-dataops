@@ -118,38 +118,30 @@ jobs:
     if: ${{ failure() && needs.deploy.result == 'failure' }}
     needs: deploy
     steps:
-      - name: Trigger rollback (Windows)
-        if: runner.os == 'Windows'
+      - name: Trigger rollback
         run: |
           $logsUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           $message = @"
           :warning: *DBT Production Deployment - ROLLBACK INITIATED*
 
           *Critical Alert:*
-          • Environment: PRODUCTION
-          • Action: Automatic Rollback Triggered
-          • Branch: ${{ github.ref_name }}
-          • Failed Commit: ``${{ github.sha }}``
-          • Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
+          - Environment: PRODUCTION
+          - Action: Automatic Rollback Triggered
+          - Branch: ${{ github.ref_name }}
+          - Failed Commit: ``${{ github.sha }}``
+          - Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
 
           *Immediate Actions:*
-          • Production deployment has been rolled back
-          • Review failure logs: ${logsUrl}
-          • Identify and fix root cause before re-deploying
-          • Notify stakeholders of service status
+          - Production deployment has been rolled back
+          - Review failure logs: ${logsUrl}
+          - Identify and fix root cause before re-deploying
+          - Notify stakeholders of service status
           "@
           $body = @{text=$message} | ConvertTo-Json -Depth 10
           Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
 
-      - name: Trigger rollback (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          echo "Triggering rollback procedure..."
-          curl -X POST -H 'Content-type: application/json' --data '{"text":":warning: Production Deployment Rolled Back Ref: ${{ github.ref_name }}"}' https://hooks.slack.com/services/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
-
-      - name: Notify on failure (Windows)
-        if: failure() && runner.os == 'Windows'
+      - name: Notify on failure
+        if: failure()
         run: |
           $duration = [math]::Round(((Get-Date) - (Get-Date '${{ github.event.head_commit.timestamp }}')).TotalMinutes, 2)
           $logsUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -157,18 +149,18 @@ jobs:
           :red_circle: *DBT Production Deployment - CRITICAL FAILURE*
 
           *Critical Information:*
-          • Environment: PRODUCTION :rotating_light:
-          • Workflow: Deploy to Production
-          • Failed Branch: ${{ github.ref_name }}
-          • Commit: ``${{ github.sha }}`` by ${{ github.actor }}
-          • Execution Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
-          • Duration Before Failure: ${duration} minutes
-          • Run ID: ${{ github.run_id }}
+          - Environment: PRODUCTION :rotating_light:
+          - Workflow: Deploy to Production
+          - Failed Branch: ${{ github.ref_name }}
+          - Commit: ``${{ github.sha }}`` by ${{ github.actor }}
+          - Execution Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
+          - Duration Before Failure: ${duration} minutes
+          - Run ID: ${{ github.run_id }}
 
           *Impact Assessment:*
-          • Production data pipeline may be affected
-          • Rollback procedure initiated
-          • Immediate investigation required
+          - Production data pipeline may be affected
+          - Rollback procedure initiated
+          - Immediate investigation required
 
           *Troubleshooting Steps:*
           1. Check workflow logs: ${logsUrl}
@@ -178,24 +170,17 @@ jobs:
           5. Check for resource constraints or permission issues
 
           *Immediate Actions Required:*
-          • :fire: P0 Priority - Investigate immediately
-          • Review logs and identify root cause
-          • Coordinate with team for resolution
-          • Update stakeholders on incident status
-          • Document findings for post-mortem
+          - :fire: P0 Priority - Investigate immediately
+          - Review logs and identify root cause
+          - Coordinate with team for resolution
+          - Update stakeholders on incident status
+          - Document findings for post-mortem
           "@
           $body = @{text=$message} | ConvertTo-Json -Depth 10
           Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
 
-      - name: Notify on failure (Linux)
-        if: failure() && runner.os == 'Linux'
-        shell: bash
-        run: |
-          echo "Deployment failed! Check logs for details."
-          curl -X POST -H 'Content-type: application/json' --data '{"text":":red_circle: Production Deployment Failed Ref: ${{ github.ref_name }}"}' https://hooks.slack.com/services/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
-
-      - name: Notify on success (Windows)
-        if: success() && runner.os == 'Windows'
+      - name: Notify on success
+        if: success()
         run: |
           $duration = [math]::Round(((Get-Date) - (Get-Date '${{ github.event.head_commit.timestamp }}')).TotalMinutes, 2)
           $logsUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -203,40 +188,54 @@ jobs:
           :white_check_mark: *DBT Production Deployment - SUCCESS*
 
           *Deployment Information:*
-          • Environment: PRODUCTION :rocket:
-          • Workflow: Deploy to Production
-          • Branch: ${{ github.ref_name }}
-          • Commit: ``${{ github.sha }}`` by ${{ github.actor }}
-          • Execution Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
-          • Total Duration: ${duration} minutes
-          • Release: v${{ github.run_number }}
+          - Environment: PRODUCTION :rocket:
+          - Workflow: Deploy to Production
+          - Branch: ${{ github.ref_name }}
+          - Commit: ``${{ github.sha }}`` by ${{ github.actor }}
+          - Execution Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
+          - Total Duration: ${duration} minutes
+          - Release: v${{ github.run_number }}
 
           *What was deployed:*
-          • DBT models executed successfully
-          • All production data quality tests passed
-          • Backup snapshot created
-          • Health checks completed
-          • GitHub release created
+          - DBT models executed successfully
+          - All production data quality tests passed
+          - Backup snapshot created
+          - Health checks completed
+          - GitHub release created
 
           *Post-Deployment:*
-          • Review deployment: ${logsUrl}
-          • Monitor production data pipeline
-          • Validate downstream systems
-          • Track performance metrics
+          - Review deployment: ${logsUrl}
+          - Monitor production data pipeline
+          - Validate downstream systems
+          - Track performance metrics
           "@
           $body = @{text=$message} | ConvertTo-Json -Depth 10
           Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
 
-      - name: Notify on success (Linux)
-        if: success() && runner.os == 'Linux'
-        shell: bash
-        run: |
-          echo "Deployment succeeded!"
-          curl -X POST -H 'Content-type: application/json' --data '{"text":":white_check_mark: Production Deployment Successful Ref: ${{ github.ref_name }}"}' https://hooks.slack.com/services/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
-
       - name: Cleanup workspace
         if: always()
         run: |
-          echo "Cleaning up workspace..."
-          git clean -ffdx
-          echo "Cleanup completed"
+          echo "Cleaning up workspace and caches..."
+
+          # Xóa workspace
+          cd ${{ github.workspace }}\..
+          Remove-Item -Path "${{ github.workspace }}" -Recurse -Force -ErrorAction SilentlyContinue
+
+          # Xóa Python pip cache
+          $pipCache = "$env:LOCALAPPDATA\pip\cache"
+          if (Test-Path $pipCache) {
+            Remove-Item -Path $pipCache -Recurse -Force -ErrorAction SilentlyContinue
+            echo "Cleared pip cache"
+          }
+
+          # Xóa temp files của runner
+          $runnerTemp = "C:\Users\LENOVO\actions-runner\_work\_temp"
+          if (Test-Path $runnerTemp) {
+            Get-ChildItem $runnerTemp -Recurse | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+            echo "Cleared runner temp files"
+          }
+
+          # Xóa Python __pycache__
+          Get-ChildItem -Path "C:\Users\LENOVO\actions-runner\_work" -Recurse -Directory -Filter "__pycache__" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+          echo "Cleanup completed - freed maximum disk space"

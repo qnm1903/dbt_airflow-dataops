@@ -93,8 +93,8 @@ jobs:
           echo "- **DBT Run Status:** ${{ steps.dbt_run.outputs.run_status == '0' && '✅ Success' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **DBT Test Status:** ${{ steps.dbt_test.outputs.test_status == '0' && '✅ Success' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
 
-      - name: Notify on failure (Windows)
-        if: failure() && runner.os == 'Windows'
+      - name: Notify on failure
+        if: failure()
         run: |
           $duration = [math]::Round(((Get-Date) - (Get-Date '${{ github.event.head_commit.timestamp }}')).TotalMinutes, 2)
           $logsUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -102,13 +102,13 @@ jobs:
           :red_circle: *DBT Development Deployment - FAILURE ALERT*
 
           *Critical Information:*
-          • Environment: Development
-          • Workflow: Deploy to Development
-          • Failed Branch: ${{ github.ref_name }}
-          • Commit: ``${{ github.sha }}`` by ${{ github.actor }}
-          • Execution Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
-          • Duration Before Failure: ${duration} minutes
-          • Run ID: ${{ github.run_id }}
+          - Environment: Development
+          - Workflow: Deploy to Development
+          - Failed Branch: ${{ github.ref_name }}
+          - Commit: ``${{ github.sha }}`` by ${{ github.actor }}
+          - Execution Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
+          - Duration Before Failure: ${duration} minutes
+          - Run ID: ${{ github.run_id }}
 
           *Troubleshooting Steps:*
           1. Check the workflow logs: ${logsUrl}
@@ -118,23 +118,16 @@ jobs:
           5. Validate source data availability
 
           *Immediate Actions Required:*
-          • Review logs and identify root cause
-          • Fix underlying issue (code, schema, or permissions)
-          • Push fix to develop branch to re-trigger deployment
-          • Update team on resolution progress
+          - Review logs and identify root cause
+          - Fix underlying issue (code, schema, or permissions)
+          - Push fix to develop branch to re-trigger deployment
+          - Update team on resolution progress
           "@
           $body = @{text=$message} | ConvertTo-Json -Depth 10
           Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
 
-      - name: Notify on failure (Linux)
-        if: failure() && runner.os == 'Linux'
-        shell: bash
-        run: |
-          echo "Deployment failed! Check logs for details."
-          curl -X POST -H 'Content-type: application/json' --data '{"text":":red_circle: Development Deployment Failed! Ref: ${{ github.ref_name }}"}' https://hooks.slack.com/services/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
-
-      - name: Notify on success (Windows)
-        if: success() && runner.os == 'Windows'
+      - name: Notify on success
+        if: success()
         run: |
           $duration = [math]::Round(((Get-Date) - (Get-Date '${{ github.event.head_commit.timestamp }}')).TotalMinutes, 2)
           $logsUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -142,37 +135,51 @@ jobs:
           :white_check_mark: *DBT Development Deployment - SUCCESS*
 
           *Deployment Information:*
-          • Environment: Development
-          • Workflow: Deploy to Development
-          • Branch: ${{ github.ref_name }}
-          • Commit: ``${{ github.sha }}`` by ${{ github.actor }}
-          • Execution Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
-          • Total Duration: ${duration} minutes
-          • Run ID: ${{ github.run_id }}
+          - Environment: Development
+          - Workflow: Deploy to Development
+          - Branch: ${{ github.ref_name }}
+          - Commit: ``${{ github.sha }}`` by ${{ github.actor }}
+          - Execution Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
+          - Total Duration: ${duration} minutes
+          - Run ID: ${{ github.run_id }}
 
           *What was deployed:*
-          • DBT models executed successfully
-          • All data quality tests passed
-          • Documentation generated
+          - DBT models executed successfully
+          - All data quality tests passed
+          - Documentation generated
 
           *Next Steps:*
-          • Review deployment summary: ${logsUrl}
-          • Validate data in development database
-          • Monitor data pipeline performance
+          - Review deployment summary: ${logsUrl}
+          - Validate data in development database
+          - Monitor data pipeline performance
           "@
           $body = @{text=$message} | ConvertTo-Json -Depth 10
           Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
 
-      - name: Notify on success (Linux)
-        if: success() && runner.os == 'Linux'
-        shell: bash
-        run: |
-          echo "Deployment succeeded!"
-          curl -X POST -H 'Content-type: application/json' --data '{"text":":white_check_mark: Development Deployment Successful! Ref: ${{ github.ref_name }}"}' https://hooks.slack.com/services/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
-
       - name: Cleanup workspace
         if: always()
         run: |
-          echo "Cleaning up workspace..."
-          git clean -ffdx
-          echo "Cleanup completed"
+          echo "Cleaning up workspace and caches..."
+
+          # Xóa workspace
+          cd ${{ github.workspace }}\..
+          Remove-Item -Path "${{ github.workspace }}" -Recurse -Force -ErrorAction SilentlyContinue
+
+          # Xóa Python pip cache
+          $pipCache = "$env:LOCALAPPDATA\pip\cache"
+          if (Test-Path $pipCache) {
+            Remove-Item -Path $pipCache -Recurse -Force -ErrorAction SilentlyContinue
+            echo "Cleared pip cache"
+          }
+
+          # Xóa temp files của runner
+          $runnerTemp = "C:\Users\LENOVO\actions-runner\_work\_temp"
+          if (Test-Path $runnerTemp) {
+            Get-ChildItem $runnerTemp -Recurse | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+            echo "Cleared runner temp files"
+          }
+
+          # Xóa Python __pycache__
+          Get-ChildItem -Path "C:\Users\LENOVO\actions-runner\_work" -Recurse -Directory -Filter "__pycache__" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+          echo "Cleanup completed - freed maximum disk space"
