@@ -68,7 +68,7 @@ jobs:
       - name: Install DBT dependencies
         run: |
           cd dbt
-          # dbt deps
+          dbt deps
           echo "Skipping dbt deps for testing"
 
       - name: Create backup snapshot
@@ -80,14 +80,14 @@ jobs:
         id: dbt_run
         run: |
           cd dbt
-          # dbt run --profiles-dir ~/.dbt --target prod
+          dbt run --profiles-dir ~/.dbt --target prod
           echo "Skipping dbt run for testing"
 
       - name: Run DBT tests (Production)
         id: dbt_test
         run: |
           cd dbt
-          # dbt test --profiles-dir ~/.dbt --target prod
+          dbt test --profiles-dir ~/.dbt --target prod
           echo "Skipping dbt test for testing"
 
       - name: Post-deployment health check

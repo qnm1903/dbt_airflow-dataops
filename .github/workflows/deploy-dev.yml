@@ -53,14 +53,14 @@ jobs:
       - name: Install DBT dependencies
         run: |
           cd dbt
-          # dbt deps
+          dbt deps
           echo "Skipping dbt deps for testing"
 
       - name: Run DBT models
         id: dbt_run
         run: |
           cd dbt
-          # dbt run --profiles-dir ~/.dbt --target dev
+          dbt run --profiles-dir ~/.dbt --target dev
           echo "Skipping dbt run for testing"
           echo "run_status=0" >> $GITHUB_OUTPUT
 
@@ -68,14 +68,14 @@ jobs:
         id: dbt_test
         run: |
           cd dbt
-          # dbt test --profiles-dir ~/.dbt --target dev
+          dbt test --profiles-dir ~/.dbt --target dev
           echo "Skipping dbt test for testing"
           echo "test_status=0" >> $GITHUB_OUTPUT
 
       - name: Generate documentation
         run: |
           cd dbt
-          # dbt docs generate --profiles-dir ~/.dbt --target dev
+          dbt docs generate --profiles-dir ~/.dbt --target dev
           echo "Skipping dbt docs for testing"
 
       - name: Upload deployment logs
