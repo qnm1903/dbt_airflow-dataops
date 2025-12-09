@@ -31,10 +31,10 @@ jobs:
           pip install dbt-sqlserver==1.4.0
 
       - name: Configure DBT profiles
-        shell: bash
         run: |
-          mkdir -p ~/.dbt
-          cat <<EOF > ~/.dbt/profiles.yml
+          $dbtDir = "$env:USERPROFILE\.dbt"
+          if (-not (Test-Path $dbtDir)) { New-Item -ItemType Directory -Path $dbtDir -Force }
+          @"
           dbt_airflow_project:
             target: dev
             outputs:
@@ -48,7 +48,7 @@ jobs:
                 user: ${{ secrets.DEV_SQL_USER }}
                 password: ${{ secrets.DEV_SQL_PASSWORD }}
                 threads: 4
-          EOF
+          "@ | Out-File -FilePath "$dbtDir\profiles.yml" -Encoding UTF8
 
       - name: Install DBT dependencies
         run: |
@@ -96,8 +96,34 @@ jobs:
       - name: Notify on failure (Windows)
         if: failure() && runner.os == 'Windows'
         run: |
-          echo "Deployment failed! Check logs for details."
-          $body = @{text=":red_circle: Development Deployment Failed! Ref: ${{ github.ref_name }}"} | ConvertTo-Json
+          $duration = [math]::Round(((Get-Date) - (Get-Date '${{ github.event.head_commit.timestamp }}')).TotalMinutes, 2)
+          $logsUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $message = @"
+          :red_circle: *DBT Development Deployment - FAILURE ALERT*
+
+          *Critical Information:*
+          • Environment: Development
+          • Workflow: Deploy to Development
+          • Failed Branch: ${{ github.ref_name }}
+          • Commit: ``${{ github.sha }}`` by ${{ github.actor }}
+          • Execution Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
+          • Duration Before Failure: ${duration} minutes
+          • Run ID: ${{ github.run_id }}
+
+          *Troubleshooting Steps:*
+          1. Check the workflow logs: ${logsUrl}
+          2. Verify DBT models and SQL syntax
+          3. Check SQL Server connectivity and permissions
+          4. Review recent code changes in commit ${{ github.sha }}
+          5. Validate source data availability
+
+          *Immediate Actions Required:*
+          • Review logs and identify root cause
+          • Fix underlying issue (code, schema, or permissions)
+          • Push fix to develop branch to re-trigger deployment
+          • Update team on resolution progress
+          "@
+          $body = @{text=$message} | ConvertTo-Json -Depth 10
           Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
 
       - name: Notify on failure (Linux)
@@ -110,8 +136,31 @@ jobs:
       - name: Notify on success (Windows)
         if: success() && runner.os == 'Windows'
         run: |
-          echo "Deployment succeeded!"
-          $body = @{text=":white_check_mark: Development Deployment Successful! Ref: ${{ github.ref_name }}"} | ConvertTo-Json
+          $duration = [math]::Round(((Get-Date) - (Get-Date '${{ github.event.head_commit.timestamp }}')).TotalMinutes, 2)
+          $logsUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $message = @"
+          :white_check_mark: *DBT Development Deployment - SUCCESS*
+
+          *Deployment Information:*
+          • Environment: Development
+          • Workflow: Deploy to Development
+          • Branch: ${{ github.ref_name }}
+          • Commit: ``${{ github.sha }}`` by ${{ github.actor }}
+          • Execution Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
+          • Total Duration: ${duration} minutes
+          • Run ID: ${{ github.run_id }}
+
+          *What was deployed:*
+          • DBT models executed successfully
+          • All data quality tests passed
+          • Documentation generated
+
+          *Next Steps:*
+          • Review deployment summary: ${logsUrl}
+          • Validate data in development database
+          • Monitor data pipeline performance
+          "@
+          $body = @{text=$message} | ConvertTo-Json -Depth 10
           Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
 
       - name: Notify on success (Linux)
@@ -123,7 +172,6 @@ jobs:
 
       - name: Cleanup workspace
         if: always()
-        shell: bash
         run: |
           echo "Cleaning up workspace..."
           git clean -ffdx

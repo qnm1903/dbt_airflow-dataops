@@ -46,10 +46,10 @@ jobs:
         run: pip install dbt-sqlserver==1.4.0
 
       - name: Configure DBT profiles for production
-        shell: bash
         run: |
-          mkdir -p ~/.dbt
-          cat <<EOF > ~/.dbt/profiles.yml
+          $dbtDir = "$env:USERPROFILE\.dbt"
+          if (-not (Test-Path $dbtDir)) { New-Item -ItemType Directory -Path $dbtDir -Force }
+          @"
           dbt_airflow_project:
             target: prod
             outputs:
@@ -63,7 +63,7 @@ jobs:
                 user: ${{ secrets.PROD_SQL_USER }}
                 password: ${{ secrets.PROD_SQL_PASSWORD }}
                 threads: 8
-          EOF
+          "@ | Out-File -FilePath "$dbtDir\profiles.yml" -Encoding UTF8
 
       - name: Install DBT dependencies
         run: |
@@ -121,8 +121,24 @@ jobs:
       - name: Trigger rollback (Windows)
         if: runner.os == 'Windows'
         run: |
-          echo "Triggering rollback procedure..."
-          $body = @{text=":warning: Production Deployment Rolled Back Ref: ${{ github.ref_name }}"} | ConvertTo-Json
+          $logsUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $message = @"
+          :warning: *DBT Production Deployment - ROLLBACK INITIATED*
+
+          *Critical Alert:*
+          • Environment: PRODUCTION
+          • Action: Automatic Rollback Triggered
+          • Branch: ${{ github.ref_name }}
+          • Failed Commit: ``${{ github.sha }}``
+          • Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
+
+          *Immediate Actions:*
+          • Production deployment has been rolled back
+          • Review failure logs: ${logsUrl}
+          • Identify and fix root cause before re-deploying
+          • Notify stakeholders of service status
+          "@
+          $body = @{text=$message} | ConvertTo-Json -Depth 10
           Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
 
       - name: Trigger rollback (Linux)
@@ -135,8 +151,40 @@ jobs:
       - name: Notify on failure (Windows)
         if: failure() && runner.os == 'Windows'
         run: |
-          echo "Deployment failed! Check logs for details."
-          $body = @{text=":red_circle: Production Deployment Failed Ref: ${{ github.ref_name }}"} | ConvertTo-Json
+          $duration = [math]::Round(((Get-Date) - (Get-Date '${{ github.event.head_commit.timestamp }}')).TotalMinutes, 2)
+          $logsUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $message = @"
+          :red_circle: *DBT Production Deployment - CRITICAL FAILURE*
+
+          *Critical Information:*
+          • Environment: PRODUCTION :rotating_light:
+          • Workflow: Deploy to Production
+          • Failed Branch: ${{ github.ref_name }}
+          • Commit: ``${{ github.sha }}`` by ${{ github.actor }}
+          • Execution Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
+          • Duration Before Failure: ${duration} minutes
+          • Run ID: ${{ github.run_id }}
+
+          *Impact Assessment:*
+          • Production data pipeline may be affected
+          • Rollback procedure initiated
+          • Immediate investigation required
+
+          *Troubleshooting Steps:*
+          1. Check workflow logs: ${logsUrl}
+          2. Verify production database status and connectivity
+          3. Review recent changes in commit ${{ github.sha }}
+          4. Validate data integrity and schema compatibility
+          5. Check for resource constraints or permission issues
+
+          *Immediate Actions Required:*
+          • :fire: P0 Priority - Investigate immediately
+          • Review logs and identify root cause
+          • Coordinate with team for resolution
+          • Update stakeholders on incident status
+          • Document findings for post-mortem
+          "@
+          $body = @{text=$message} | ConvertTo-Json -Depth 10
           Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
 
       - name: Notify on failure (Linux)
@@ -149,8 +197,34 @@ jobs:
       - name: Notify on success (Windows)
         if: success() && runner.os == 'Windows'
         run: |
-          echo "Deployment succeeded!"
-          $body = @{text=":white_check_mark: Production Deployment Successful Ref: ${{ github.ref_name }}"} | ConvertTo-Json
+          $duration = [math]::Round(((Get-Date) - (Get-Date '${{ github.event.head_commit.timestamp }}')).TotalMinutes, 2)
+          $logsUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $message = @"
+          :white_check_mark: *DBT Production Deployment - SUCCESS*
+
+          *Deployment Information:*
+          • Environment: PRODUCTION :rocket:
+          • Workflow: Deploy to Production
+          • Branch: ${{ github.ref_name }}
+          • Commit: ``${{ github.sha }}`` by ${{ github.actor }}
+          • Execution Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
+          • Total Duration: ${duration} minutes
+          • Release: v${{ github.run_number }}
+
+          *What was deployed:*
+          • DBT models executed successfully
+          • All production data quality tests passed
+          • Backup snapshot created
+          • Health checks completed
+          • GitHub release created
+
+          *Post-Deployment:*
+          • Review deployment: ${logsUrl}
+          • Monitor production data pipeline
+          • Validate downstream systems
+          • Track performance metrics
+          "@
+          $body = @{text=$message} | ConvertTo-Json -Depth 10
           Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
 
       - name: Notify on success (Linux)
@@ -162,7 +236,6 @@ jobs:
 
       - name: Cleanup workspace
         if: always()
-        shell: bash
         run: |
           echo "Cleaning up workspace..."
           git clean -ffdx
