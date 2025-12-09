@@ -23,6 +23,7 @@ jobs:
 
       - name: Install DBT
         run: |
+          pip install --only-binary ":all:" pyodbc
           pip install dbt-sqlserver==1.4.0
 
       - name: Configure DBT profiles
