@@ -3,6 +3,12 @@
 -- Gold layer: Comprehensive product performance analytics and business metrics  
 -- Business-ready mart for product analysis, inventory optimization, and profitability insights
 
+-- Gold layer: Comprehensive product performance analytics and business metrics  
+-- Business-ready mart for product analysis, inventory optimization, and profitability insights
+{{ config(materialized='table') }}
+
+-- Gold layer: Comprehensive product performance analytics and business metrics  
+-- Business-ready mart for product analysis, inventory optimization, and profitability insights
 with products as (
   select * from {{ ref('slvr_products') }}
 ),

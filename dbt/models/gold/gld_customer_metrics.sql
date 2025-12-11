@@ -3,6 +3,12 @@
 -- Gold layer: Comprehensive customer analytics and business metrics
 -- Business-ready mart for customer performance analysis and segmentation
 
+-- Gold layer: Comprehensive customer analytics and business metrics
+-- Business-ready mart for customer performance analysis and segmentation
+{{ config(materialized='table') }}
+
+-- Gold layer: Comprehensive customer analytics and business metrics
+-- Business-ready mart for customer performance analysis and segmentation
 with customers as (
   select * from {{ ref('slvr_customers') }}
 ),
