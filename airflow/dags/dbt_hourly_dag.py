@@ -20,7 +20,7 @@ from airflow.utils.trigger_rule import TriggerRule
 # Configuration
 DBT_PROJECT_DIR = "/usr/app/dbt"
 DBT_PROFILES_DIR = "/usr/app/dbt"
-DBT_CONTAINER = "dbt-airflow-dataops-dbt-1"
+DBT_CONTAINER = "dbt_airflow-dataops-dbt-1"
 
 default_args = {
     "owner": "data_engineering",
@@ -140,11 +140,7 @@ def build_failure_message(context):
     # Calculate duration if available
     start_time = dag_run.start_date if dag_run else None
     end_time = datetime.now(timezone.utc)
-    duration = (
-        f"{(end_time - start_time).total_seconds() / 60:.2f} minutes"
-        if start_time
-        else "Unknown"
-    )
+    duration = f"{(end_time - start_time).total_seconds() / 60:.2f} minutes" if start_time else "Unknown"
 
     # Get log URL
     log_url = task_instance.log_url if task_instance else "N/A"

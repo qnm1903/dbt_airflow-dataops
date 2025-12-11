@@ -23,7 +23,7 @@ from airflow.utils.trigger_rule import TriggerRule
 # Configuration
 DBT_PROJECT_DIR = "/usr/app/dbt"
 DBT_PROFILES_DIR = "/usr/app/dbt"
-DBT_CONTAINER = "dbt-airflow-dataops-dbt-1"
+DBT_CONTAINER = "dbt_airflow-dataops-dbt-1"
 
 default_args = {
     "owner": "data_engineering",
