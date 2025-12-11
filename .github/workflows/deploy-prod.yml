@@ -109,39 +109,11 @@ jobs:
           draft: false
           prerelease: false
 
-  # Rollback job (manual trigger)
-  rollback:
-    name: Rollback Deployment
-    runs-on: self-hosted
-    if: ${{ failure() && needs.deploy.result == 'failure' }}
-    needs: deploy
-    steps:
-      - name: Trigger rollback
-        run: |
-          $logsUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          $message = @"
-          :warning: *DBT Production Deployment - ROLLBACK INITIATED*
-
-          *Critical Alert:*
-          - Environment: PRODUCTION
-          - Action: Automatic Rollback Triggered
-          - Branch: ${{ github.ref_name }}
-          - Failed Commit: ``${{ github.sha }}``
-          - Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
-
-          *Immediate Actions:*
-          - Production deployment has been rolled back
-          - Review failure logs: ${logsUrl}
-          - Identify and fix root cause before re-deploying
-          - Notify stakeholders of service status
-          "@
-          $body = @{text=$message} | ConvertTo-Json -Depth 10
-          Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
-
       - name: Notify on failure
         if: failure()
         run: |
-          $duration = [math]::Round(((Get-Date) - (Get-Date '${{ github.event.head_commit.timestamp }}')).TotalMinutes, 2)
+          $startTime = if ('${{ github.event.head_commit.timestamp }}') { Get-Date '${{ github.event.head_commit.timestamp }}' } else { (Get-Date).AddMinutes(-5) }
+          $duration = [math]::Round(((Get-Date) - $startTime).TotalMinutes, 2)
           $logsUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           $message = @"
           :red_circle: *DBT Production Deployment - CRITICAL FAILURE*
@@ -175,12 +147,13 @@ jobs:
           - Document findings for post-mortem
           "@
           $body = @{text=$message} | ConvertTo-Json -Depth 10
-          Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
+          try { Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json' } catch {}
 
       - name: Notify on success
         if: success()
         run: |
-          $duration = [math]::Round(((Get-Date) - (Get-Date '${{ github.event.head_commit.timestamp }}')).TotalMinutes, 2)
+          $startTime = if ('${{ github.event.head_commit.timestamp }}') { Get-Date '${{ github.event.head_commit.timestamp }}' } else { (Get-Date).AddMinutes(-5) }
+          $duration = [math]::Round(((Get-Date) - $startTime).TotalMinutes, 2)
           $logsUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           $message = @"
           :white_check_mark: *DBT Production Deployment - SUCCESS*
@@ -208,7 +181,36 @@ jobs:
           - Track performance metrics
           "@
           $body = @{text=$message} | ConvertTo-Json -Depth 10
-          Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json'
+          try { Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json' } catch {}
+
+  # Rollback job (manual trigger)
+  rollback:
+    name: Rollback Deployment
+    runs-on: self-hosted
+    if: ${{ failure() && needs.deploy.result == 'failure' }}
+    needs: deploy
+    steps:
+      - name: Trigger rollback
+        run: |
+          $logsUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $message = @"
+          :warning: *DBT Production Deployment - ROLLBACK INITIATED*
+
+          *Critical Alert:*
+          - Environment: PRODUCTION
+          - Action: Automatic Rollback Triggered
+          - Branch: ${{ github.ref_name }}
+          - Failed Commit: ``${{ github.sha }}``
+          - Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC
+
+          *Immediate Actions:*
+          - Production deployment has been rolled back
+          - Review failure logs: ${logsUrl}
+          - Identify and fix root cause before re-deploying
+          - Notify stakeholders of service status
+          "@
+          $body = @{text=$message} | ConvertTo-Json -Depth 10
+          try { Invoke-WebRequest -Uri 'https://hooks.slack.com/services/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' -Method POST -Body $body -ContentType 'application/json' } catch {}
 
       - name: Cleanup workspace
         if: always()
